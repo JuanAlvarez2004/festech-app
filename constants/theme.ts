@@ -5,25 +5,74 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+// Paleta de colores Festech inspirada en la naturaleza del Tolima
+const primary = '#2A9D8F'; // Verde montaña profundo
+const secondary = '#264653'; // Gris volcán oscuro
+const accent = '#E9C46A'; // Beige cálido / Arena
+
+// Colores derivados
+const primaryLight = '#52C4B0';
+const primaryDark = '#1E6F64';
+const accentLight = '#F0D37F';
+const accentDark = '#B8954A';
 
 export const Colors = {
+  // Colores principales
+  primary,
+  primaryLight,
+  primaryDark,
+  secondary,
+  accent,
+  accentLight,
+  accentDark,
+  
+  // Grises y neutros
+  white: '#FFFFFF',
+  black: '#000000',
+  gray100: '#F8F9FA',
+  gray200: '#E9ECEF',
+  gray300: '#DEE2E6',
+  gray400: '#CED4DA',
+  gray500: '#ADB5BD',
+  gray600: '#6C757D',
+  gray700: '#495057',
+  gray800: '#343A40',
+  gray900: '#212529',
+  
+  // Estados
+  success: '#28A745',
+  warning: '#FFC107',
+  error: '#DC3545',
+  info: '#17A2B8',
+  
+  // Tema claro
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: secondary,
+    textSecondary: '#6C757D',
+    background: '#FFFFFF',
+    backgroundSecondary: '#F8F9FA',
+    card: '#FFFFFF',
+    border: '#E9ECEF',
+    tint: primary,
+    icon: '#6C757D',
+    tabIconDefault: '#ADB5BD',
+    tabIconSelected: primary,
+    overlay: 'rgba(0, 0, 0, 0.5)',
   },
+  
+  // Tema oscuro
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    text: '#FFFFFF',
+    textSecondary: '#ADB5BD',
+    background: '#121212',
+    backgroundSecondary: '#1E1E1E',
+    card: '#2D2D2D',
+    border: '#3D3D3D',
+    tint: primaryLight,
+    icon: '#ADB5BD',
+    tabIconDefault: '#6C757D',
+    tabIconSelected: primaryLight,
+    overlay: 'rgba(0, 0, 0, 0.7)',
   },
 };
 
