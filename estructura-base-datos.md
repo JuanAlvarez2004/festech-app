@@ -220,6 +220,11 @@ CREATE TABLE videos (
   location_lng DECIMAL(11, 8),
   location_name VARCHAR(255),
   tags TEXT[] DEFAULT '{}',
+  coupon_id UUID REFERENCES coupons(id) ON DELETE SET NULL, -- 🆕 CUPÓN ASOCIADO
+  has_active_coupon BOOLEAN GENERATED ALWAYS AS (
+    coupon_id IS NOT NULL AND 
+    EXISTS (SELECT 1 FROM coupons WHERE id = coupon_id AND is_active = true AND (expires_at IS NULL OR expires_at > NOW()))
+  ) STORED, -- 🆕 CAMPO CALCULADO AUTOMÁTICO
   views_count INTEGER DEFAULT 0,
   likes_count INTEGER DEFAULT 0,
   is_active BOOLEAN DEFAULT true,
@@ -231,15 +236,20 @@ CREATE TABLE videos (
 - `video_url`: URL del archivo en Supabase Storage
 - `likes_count`: Actualizado automáticamente por triggers
 - `tags`: Tags para búsqueda y filtros
+- `coupon_id`: Referencia opcional a cupón asociado 🆕
+- `has_active_coupon`: Campo calculado que indica si el video tiene cupón activo 🆕
 
 **Políticas RLS:**
 - Anyone can view active videos
 - Business owners can manage their videos
+- Business owners can only associate their own coupons 🆕
 
 **Índices:**
 - `idx_videos_business` - Videos por negocio
 - `idx_videos_created` - Orden cronológico para feed
 - `idx_videos_location` - Búsquedas por ubicación
+- `idx_videos_coupon` - Videos con cupones asociados 🆕
+- `idx_videos_active_coupon` - Videos con cupones activos 🆕
 
 ### video_tags
 **Función:** Tags individuales para videos (búsqueda avanzada)  
@@ -350,6 +360,8 @@ CREATE TABLE conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   business_id UUID NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  video_id UUID REFERENCES videos(id) ON DELETE SET NULL, -- 🆕 VIDEO DE ORIGEN
+  coupon_context_id UUID REFERENCES coupons(id) ON DELETE SET NULL, -- 🆕 CUPÓN DE CONTEXTO
   last_message_at TIMESTAMP DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW(),
   UNIQUE(client_id, business_id)

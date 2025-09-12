@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    FlatList,
-    StatusBar,
-    StyleSheet,
-    View,
+  Alert,
+  Dimensions,
+  FlatList,
+  StatusBar,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -199,7 +199,7 @@ export default function HomeScreen() {
         keyExtractor={item => item.id}
         pagingEnabled
         showsVerticalScrollIndicator={false}
-        snapToInterval={SCREEN_HEIGHT - 140} // Altura ajustada para tabs
+        snapToInterval={SCREEN_HEIGHT} // Altura completa de la pantalla
         snapToAlignment="start"
         decelerationRate="fast"
         onViewableItemsChanged={handleViewableItemsChanged}
@@ -207,8 +207,8 @@ export default function HomeScreen() {
         refreshing={refreshing}
         onRefresh={handleRefresh}
         getItemLayout={(_, index) => ({
-          length: SCREEN_HEIGHT - 140,
-          offset: (SCREEN_HEIGHT - 140) * index,
+          length: SCREEN_HEIGHT,
+          offset: SCREEN_HEIGHT * index,
           index,
         })}
       />

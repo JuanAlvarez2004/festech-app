@@ -206,10 +206,14 @@ Authorization: Bearer {jwt_token}
 
 ## 🎬 API de Videos
 
-### Feed Principal (TikTok Style)
+### Feed Principal (TikTok Style) 
 ```http
-GET /rest/v1/videos?select=*,business:businesses(name,logo_url,category),likes:video_likes(count)&is_active=eq.true&order=created_at.desc&limit=20
+GET /rest/v1/videos?select=*,business:businesses(name,logo_url,category),coupon:coupons(id,title,discount_type,discount_value,coin_price,expires_at),likes:video_likes(count)&is_active=eq.true&order=has_active_coupon.desc,created_at.desc&limit=20
 ```
+
+**Parámetros adicionales:**
+- `has_active_coupon=eq.true` - Solo videos con cupones activos
+- `coupon_id=not.is.null` - Videos que tienen cupón asociado
 
 **Respuesta:**
 ```json
@@ -222,6 +226,8 @@ GET /rest/v1/videos?select=*,business:businesses(name,logo_url,category),likes:v
     "thumbnail_url": "https://storage.supabase.co/...",
     "duration": 25,
     "tags": ["cafe", "ibague", "especialidad"],
+    "coupon_id": "uuid", // 🆕 ID del cupón asociado
+    "has_active_coupon": true, // 🆕 Indica si tiene cupón activo
     "location_lat": 4.4389,
     "location_lng": -75.2322,
     "location_name": "Café Central Ibagué",
@@ -232,6 +238,14 @@ GET /rest/v1/videos?select=*,business:businesses(name,logo_url,category),likes:v
       "name": "Café Central Ibagué",
       "logo_url": "https://...",
       "category": "gastronomia"
+    },
+    "coupon": { // 🆕 Información del cupón
+      "id": "uuid",
+      "title": "20% OFF en Café",
+      "discount_type": "percentage",
+      "discount_value": 20.00,
+      "coin_price": 50,
+      "expires_at": "2024-02-15T23:59:59Z"
     }
   }
 ]
@@ -253,9 +267,28 @@ Authorization: Bearer {jwt_token}
   "tags": ["tag1", "tag2", "tag3"],
   "location_lat": 4.4389,
   "location_lng": -75.2322,
-  "location_name": "Nombre del lugar"
+  "location_name": "Nombre del lugar",
+  "coupon_id": "uuid" // 🆕 OPCIONAL: Cupón asociado al video
 }
 ```
+
+### Filtrar Videos con Cupones Activos 🆕
+```http
+GET /rest/v1/videos?select=*,business:businesses(name,logo_url),coupon:coupons(*)&has_active_coupon=eq.true&order=created_at.desc&limit=20
+```
+
+### Asociar/Desasociar Cupón a Video 🆕
+```http
+PATCH /rest/v1/videos?id=eq.{video_id}
+Content-Type: application/json
+Authorization: Bearer {jwt_token}
+
+{
+  "coupon_id": "uuid" // o null para desasociar
+}
+```
+
+**Validación:** Solo el propietario del negocio puede asociar sus propios cupones a sus videos.
 
 ### Incrementar Views
 ```http
@@ -267,10 +300,33 @@ Content-Type: application/json
 }
 ```
 
-### Buscar Videos por Tags
+### Filtrar Videos por Categoría y Cupones 🆕
 ```http
-GET /rest/v1/videos?tags=cs.{tag1,tag2}&is_active=eq.true&order=likes_count.desc
+GET /rest/v1/videos?select=*,business:businesses(name,category),coupon:coupons(*)&business.category=eq.gastronomia&has_active_coupon=eq.true&order=likes_count.desc&limit=15
 ```
+
+### Feed Optimizado con Priorización de Cupones 🆕
+```http
+GET /rest/v1/rpc/get_prioritized_feed
+Content-Type: application/json
+
+{
+  "user_lat": 4.4389,
+  "user_lng": -75.2322,
+  "radius_km": 10,
+  "user_interests": ["gastronomia", "aventura"],
+  "followed_businesses": ["uuid1", "uuid2"],
+  "limit_results": 20
+}
+```
+
+**Algoritmo del Feed:**
+1. **Videos con cupones activos** (prioridad máxima) 🆕
+2. Videos de negocios seguidos
+3. Videos locales (por geolocalización)
+4. Videos por intereses del usuario
+5. Videos con mayor engagement
+6. Videos más recientes
 
 ---
 
@@ -382,7 +438,7 @@ GET /rest/v1/business_reviews?select=*,user:profiles(full_name,avatar_url)&busin
 
 ## 💬 API de Chat en Tiempo Real
 
-### Crear/Obtener Conversación
+### Crear/Obtener Conversación 
 ```http
 POST /rest/v1/conversations
 Content-Type: application/json
@@ -390,15 +446,46 @@ Authorization: Bearer {jwt_token}
 
 {
   "client_id": "uuid",
-  "business_id": "uuid"
+  "business_id": "uuid",
+  "video_id": "uuid", // 🆕 OPCIONAL: Video desde el cual se inicia el chat
+  "coupon_context_id": "uuid" // 🆕 OPCIONAL: Cupón de contexto (se obtiene automáticamente del video)
 }
 ```
 
-**Resultado Automático:** Se otorgan 5 coins por iniciar chat (primera vez por negocio)
+**Resultado Automático:** 
+- Se otorgan 5 coins por iniciar chat (primera vez por negocio)
+- Si el video tiene cupón, se guarda el contexto automáticamente
 
 ### Listar Conversaciones
 ```http
-GET /rest/v1/conversations?select=*,client:profiles!client_id(full_name,avatar_url),business:businesses(name,logo_url)&or=(client_id.eq.{user_id},business_id.in.(select_business_ids))&order=last_message_at.desc
+GET /rest/v1/conversations?select=*,client:profiles!client_id(full_name,avatar_url),business:businesses(name,logo_url),video:videos(title,thumbnail_url),coupon_context:coupons(title,discount_type,discount_value)&or=(client_id.eq.{user_id},business_id.in.(select_business_ids))&order=last_message_at.desc
+```
+
+**Respuesta con contexto de cupón:**
+```json
+[
+  {
+    "id": "uuid",
+    "last_message_at": "2024-01-20T15:45:00Z",
+    "client": {
+      "full_name": "Juan Pérez",
+      "avatar_url": "https://..."
+    },
+    "business": {
+      "name": "Café Central Ibagué",
+      "logo_url": "https://..."
+    },
+    "video": { // 🆕 Video de origen del chat
+      "title": "El mejor café de Ibagué ☕",
+      "thumbnail_url": "https://..."
+    },
+    "coupon_context": { // 🆕 Cupón asociado al video
+      "title": "20% OFF en Café",
+      "discount_type": "percentage",
+      "discount_value": 20.00
+    }
+  }
+]
 ```
 
 ### Enviar Mensaje

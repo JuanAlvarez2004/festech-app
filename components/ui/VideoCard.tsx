@@ -5,15 +5,15 @@ import type { VideoWithBusiness } from '@/types';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { VideoView, useVideoPlayer } from 'expo-video';
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { IconSymbol } from './icon-symbol';
 
@@ -40,13 +40,12 @@ export default function VideoCard({
 }: VideoCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const [showControls, setShowControls] = useState(false);
   const likeAnimation = useRef(new Animated.Value(1)).current;
 
   // Configurar el reproductor de video con la nueva API
   const player = useVideoPlayer(video.video_url, player => {
     player.loop = true;
-    player.muted = false;
+    player.muted = true; // Silenciado por defecto para autoplay
   });
 
   // Reproducir/pausar video basado en si está activo
@@ -57,16 +56,6 @@ export default function VideoCard({
       player.pause();
     }
   }, [isActive, player]);
-
-  const handleVideoPress = () => {
-    if (player.playing) {
-      player.pause();
-    } else {
-      player.play();
-    }
-    setShowControls(true);
-    setTimeout(() => setShowControls(false), 2000);
-  };
 
   const handleLike = () => {
     // Animación del like
@@ -98,29 +87,14 @@ export default function VideoCard({
   return (
     <View style={styles.container}>
       {/* Video */}
-      <TouchableOpacity 
-        style={styles.videoContainer} 
-        activeOpacity={1}
-        onPress={handleVideoPress}
-      >
+      <View style={styles.videoContainer}>
         <VideoView
           style={styles.video}
           player={player}
           allowsPictureInPicture={false}
           contentFit="cover"
         />
-
-        {/* Play/Pause Overlay */}
-        {showControls && (
-          <View style={styles.playOverlay}>
-            <IconSymbol
-              name={player.playing ? 'pause.fill' : 'play.fill'}
-              size={60}
-              color="rgba(255, 255, 255, 0.8)"
-            />
-          </View>
-        )}
-      </TouchableOpacity>
+      </View>
 
       {/* Bottom Gradient */}
       <LinearGradient
@@ -210,7 +184,7 @@ export default function VideoCard({
 const styles = StyleSheet.create({
   container: {
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT - (Platform.OS === 'ios' ? 160 : 140), // Resta altura de tabs y status bar
+    height: SCREEN_HEIGHT, // Altura completa de la pantalla
     backgroundColor: Colors.black,
   },
   videoContainer: {
@@ -222,22 +196,17 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  playOverlay: {
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   bottomGradient: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 150,
+    height: Platform.OS === 'ios' ? 220 : 200, // Gradiente ajustado a la nueva posición
   },
   rightActions: {
     position: 'absolute',
     right: Spacing.md,
-    bottom: 100,
+    bottom: Platform.OS === 'ios' ? 120 : 110, // Ajustado para mantener proporción con bottomInfo
     alignItems: 'center',
   },
   avatarContainer: {
@@ -276,7 +245,7 @@ const styles = StyleSheet.create({
   },
   bottomInfo: {
     position: 'absolute',
-    bottom: Spacing.lg,
+    bottom: Platform.OS === 'ios' ? 100 : 90, // Más cerca de la barra de navegación
     left: Spacing.md,
     right: 80, // Espacio para los botones de la derecha
   },
