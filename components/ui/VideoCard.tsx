@@ -2,9 +2,9 @@ import { BorderRadius, Spacing, Typography } from '@/constants/Design';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import type { VideoWithBusiness } from '@/types';
-import { VideoView, useVideoPlayer } from 'expo-video';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import React, { useRef, useState } from 'react';
 import {
     Animated,
