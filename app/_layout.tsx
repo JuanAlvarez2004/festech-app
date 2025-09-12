@@ -47,6 +47,32 @@ export default function RootLayout() {
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen 
+              name="auth/login" 
+              options={{ 
+                presentation: 'modal',
+                title: 'Iniciar Sesión',
+                headerStyle: { backgroundColor: Colors.primary },
+                headerTintColor: Colors.white,
+              }} 
+            />
+            <Stack.Screen 
+              name="auth/register" 
+              options={{ 
+                presentation: 'modal',
+                title: 'Crear Cuenta',
+                headerStyle: { backgroundColor: Colors.primary },
+                headerTintColor: Colors.white,
+              }} 
+            />
+            <Stack.Screen 
+              name="chat/[businessId]" 
+              options={{ 
+                title: 'Chat',
+                headerStyle: { backgroundColor: Colors.primary },
+                headerTintColor: Colors.white,
+              }} 
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

@@ -54,10 +54,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const profile = await getUserProfile(authUser.id);
       setUser(profile);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error loading user profile:', err);
-      setError('Error al cargar el perfil del usuario');
-      setUser(null);
+      
+      // Si el perfil no existe, intentar crearlo (fallback)
+      if (err.code === 'PGRST116') { // No rows returned
+        try {
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: authUser.id,
+              email: authUser.email!,
+              full_name: authUser.user_metadata?.full_name || 'Usuario',
+              user_type: authUser.user_metadata?.user_type || 'client',
+              city: 'Ibagué',
+            });
+          
+          if (!createError) {
+            const profile = await getUserProfile(authUser.id);
+            setUser(profile);
+          } else {
+            throw createError;
+          }
+        } catch (createErr) {
+          console.error('Error creating fallback profile:', createErr);
+          setError('Error al crear el perfil del usuario');
+          setUser(null);
+        }
+      } else {
+        setError('Error al cargar el perfil del usuario');
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -104,7 +131,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       // Si el registro fue exitoso, crear el perfil
-      if (data.user) {
+      // Nota: Según la documentación, los triggers automáticos crearán:
+      // 1. El perfil en la tabla profiles
+      // 2. La wallet con 50 coins de bienvenida
+      // 3. La transacción de coins de registro
+      if (data.user && !data.user.email_confirmed_at) {
+        // Solo crear perfil manualmente si el email no está confirmado
+        // (en caso de que los triggers no se ejecuten)
         const { error: profileError } = await supabase
           .from('profiles')
           .insert({
@@ -113,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             full_name: userData.fullName,
             user_type: userData.userType,
             phone: userData.phone,
+            city: 'Ibagué', // Ciudad por defecto según la documentación
             interests: userData.interests || [],
           });
 

@@ -134,7 +134,19 @@ export default function HomeScreen() {
   };
 
   const handleComment = (video: VideoWithBusiness) => {
-    Alert.alert('Comentarios', 'Próximamente: Sistema de comentarios');
+    // Navegar al chat con el negocio
+    router.push({
+      pathname: '/chat/[businessId]',
+      params: { businessId: video.business_id, videoId: video.id }
+    });
+  };
+
+  const handleContact = (video: VideoWithBusiness) => {
+    // Navegar al chat con el negocio
+    router.push({
+      pathname: '/chat/[businessId]',
+      params: { businessId: video.business_id, videoId: video.id }
+    });
   };
 
   const handleBusinessPress = (video: VideoWithBusiness) => {
@@ -166,6 +178,7 @@ export default function HomeScreen() {
       onLike={() => handleLike(item.id)}
       onShare={() => handleShare(item)}
       onComment={() => handleComment(item)}
+      onContact={() => handleContact(item)}
       onBusinessPress={() => handleBusinessPress(item)}
       onUserPress={() => handleUserPress(item)}
     />

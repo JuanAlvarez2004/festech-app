@@ -1,6 +1,7 @@
 import { BorderRadius, Spacing, Typography } from '@/constants/Design';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
 import type { VideoWithBusiness } from '@/types';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -15,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import AuthModal from './AuthModal';
 import { IconSymbol } from './icon-symbol';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -27,6 +29,7 @@ interface VideoCardProps {
   onComment: () => void;
   onBusinessPress: () => void;
   onUserPress: () => void;
+  onContact?: () => void;
 }
 
 export default function VideoCard({
@@ -37,10 +40,12 @@ export default function VideoCard({
   onComment,
   onBusinessPress,
   onUserPress,
+  onContact,
 }: VideoCardProps) {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const likeAnimation = useRef(new Animated.Value(1)).current;
+  const { requireAuth, showAuthModal, closeAuthModal, modalConfig } = useAuthGuard();
 
   // Configurar el reproductor de video con la nueva API
   const player = useVideoPlayer(video.video_url, player => {
@@ -58,21 +63,30 @@ export default function VideoCard({
   }, [isActive, player]);
 
   const handleLike = () => {
-    // Animación del like
-    Animated.sequence([
-      Animated.timing(likeAnimation, {
-        toValue: 1.3,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(likeAnimation, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
-    onLike();
+    requireAuth(
+      () => {
+        // Animación del like
+        Animated.sequence([
+          Animated.timing(likeAnimation, {
+            toValue: 1.3,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+          Animated.timing(likeAnimation, {
+            toValue: 1,
+            duration: 150,
+            useNativeDriver: true,
+          }),
+        ]).start();
+        
+        onLike();
+      },
+      {
+        actionType: 'like',
+        title: 'Inicia sesión para dar like',
+        message: `Para dar like a "${video.title}" y guardar tus videos favoritos, necesitas una cuenta.`,
+      }
+    );
   };
 
   const formatCount = (count: number): string => {
@@ -111,9 +125,19 @@ export default function VideoCard({
             style={styles.avatar}
             contentFit="cover"
           />
-          <View style={styles.followButton}>
+          <TouchableOpacity 
+            style={styles.followButton}
+            onPress={() => requireAuth(
+              () => console.log('Follow business:', video.business_id),
+              {
+                actionType: 'follow',
+                title: 'Inicia sesión para seguir',
+                message: `Para seguir a ${video.business.name} y recibir sus actualizaciones, necesitas una cuenta.`,
+              }
+            )}
+          >
             <IconSymbol name="plus" size={12} color={Colors.white} />
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
 
         {/* Like */}
@@ -131,9 +155,19 @@ export default function VideoCard({
         </TouchableOpacity>
 
         {/* Comment */}
-        <TouchableOpacity onPress={onComment} style={styles.actionButton}>
+        <TouchableOpacity 
+          onPress={() => requireAuth(
+            () => onComment(),
+            {
+              actionType: 'contact',
+              title: 'Inicia sesión para contactar',
+              message: `Para contactar a ${video.business.name} y acceder al chat, necesitas una cuenta.`,
+            }
+          )} 
+          style={styles.actionButton}
+        >
           <IconSymbol name="message" size={32} color={Colors.white} />
-          <Text style={styles.actionText}>0</Text>
+          <Text style={styles.actionText}>Chat</Text>
         </TouchableOpacity>
 
         {/* Share */}
@@ -176,7 +210,33 @@ export default function VideoCard({
             <Text style={styles.locationText}>{video.location_name}</Text>
           </View>
         )}
+
+        {/* Contact Button */}
+        {onContact && (
+          <TouchableOpacity 
+            onPress={() => requireAuth(
+              () => onContact(),
+              {
+                actionType: 'contact',
+                title: 'Inicia sesión para contactar',
+                message: `Para contactar a ${video.business.name} y acceder al chat, necesitas una cuenta.`,
+              }
+            )} 
+            style={styles.contactButton}
+          >
+            <Text style={styles.contactText}>Contactar</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Auth Modal */}
+      <AuthModal
+        visible={showAuthModal}
+        onClose={closeAuthModal}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        actionType={modalConfig.actionType}
+      />
     </View>
   );
 }
@@ -308,5 +368,18 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+  },
+  contactButton: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    marginTop: Spacing.md,
+    alignSelf: 'flex-start',
+  },
+  contactText: {
+    color: Colors.white,
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.semibold,
   },
 });

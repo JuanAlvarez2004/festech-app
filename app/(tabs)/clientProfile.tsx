@@ -7,7 +7,10 @@ import {
   ScrollView, 
   StyleSheet 
 } from "react-native";
-import { Ionicons, MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui';
+import { router } from 'expo-router';
 
 interface User {
   id: string;
@@ -46,6 +49,29 @@ interface Achievement {
 }
 
 export default function ProfileClient() {
+  const { user: authUser } = useAuth();
+
+  // Si no hay usuario autenticado, mostrar pantalla de login
+  if (!authUser) {
+    return (
+      <View style={styles.loginContainer}>
+        <Text style={styles.loginTitle}>Inicia sesión</Text>
+        <Text style={styles.loginSubtitle}>Para ver tu perfil y acceder a todas las funciones</Text>
+        <Button
+          title="Iniciar Sesión"
+          onPress={() => router.push('/auth/login')}
+          style={styles.loginButton}
+        />
+        <Button
+          title="Crear Cuenta"
+          onPress={() => router.push('/auth/register')}
+          variant="outline"
+          style={styles.registerButton}
+        />
+      </View>
+    );
+  }
+
   // Mock user data - reemplazar con datos reales de Supabase
   const user: User = {
     id: "1",
@@ -480,5 +506,31 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 16,
     marginTop: 20,
+  },
+  loginContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    backgroundColor: '#F9FAFB',
+  },
+  loginTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#1F2937',
+  },
+  loginSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 32,
+    color: '#6B7280',
+  },
+  loginButton: {
+    marginBottom: 16,
+    width: '100%',
+  },
+  registerButton: {
+    width: '100%',
   },
 });
