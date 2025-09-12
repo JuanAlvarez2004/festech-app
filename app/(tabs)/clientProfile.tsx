@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
+  Alert,
   Image,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,8 +12,11 @@ import {
 } from "react-native";
 import { Loading } from "../../components/ui";
 import { Colors } from "../../constants/theme";
+import { useAuth } from "../../contexts/AuthContext";
 import { useColorScheme } from "../../hooks/use-color-scheme";
 import { useTabAuthGuard } from "../../hooks/useTabAuthGuard";
+import { UserActivity, useUserActivity } from "../../hooks/useUserActivity";
+import { ExtendedUserProfile, useUserProfile } from "../../hooks/useUserProfile";
 
 interface User {
   id: string;
@@ -107,7 +112,39 @@ export default function ProfileClient() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { shouldShowContent } = useTabAuthGuard('clientProfile');
+  const { signOut, loading: authLoading, user: authUser } = useAuth();
   
+  // Hooks para obtener datos del usuario
+  const { userProfile, loading: profileLoading, error: profileError, refreshProfile } = useUserProfile();
+  const { activities, loading: activityLoading, error: activityError, loadActivity } = useUserActivity();
+
+  // Estados locales
+  const [activeTab, setActiveTab] = useState<TabType>("activity");
+  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Función para manejar el refresh
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refreshProfile(),
+        authUser?.id ? loadActivity(authUser.id) : Promise.resolve()
+      ]);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshProfile, authUser?.id, loadActivity]);
+
+  // Cargar actividad cuando el usuario esté disponible
+  useEffect(() => {
+    if (authUser?.id) {
+      loadActivity(authUser.id);
+    }
+  }, [authUser?.id, loadActivity]);
+
   // Si no está autenticado, mostrar loading hasta que se resuelva
   if (!shouldShowContent) {
     return (
@@ -116,6 +153,63 @@ export default function ProfileClient() {
       </View>
     );
   }
+
+  // Si está cargando el perfil, mostrar loading
+  if (profileLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <Loading />
+        <Text style={{ marginTop: 16, color: colors.text }}>Cargando perfil...</Text>
+      </View>
+    );
+  }
+
+  // Si hay error y no hay datos, mostrar error
+  if (profileError && !userProfile) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, padding: 24 }}>
+        <Ionicons name="alert-circle" size={48} color={Colors.error} />
+        <Text style={{ marginTop: 16, color: Colors.error, textAlign: 'center', fontSize: 16 }}>
+          Error al cargar el perfil
+        </Text>
+        <Text style={{ marginTop: 8, color: colors.text, textAlign: 'center' }}>
+          {profileError}
+        </Text>
+        <TouchableOpacity 
+          style={{
+            marginTop: 16,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            backgroundColor: Colors.primary,
+            borderRadius: 8
+          }}
+          onPress={refreshProfile}
+        >
+          <Text style={{ color: 'white', fontWeight: '600' }}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Si no hay datos del perfil, usar datos básicos del auth
+  const currentUser: ExtendedUserProfile = userProfile || {
+    id: authUser?.id || '',
+    email: authUser?.email || '',
+    full_name: authUser?.full_name || 'Usuario',
+    user_type: 'client',
+    phone: '',
+    city: 'Ibagué',
+    avatar_url: '',
+    created_at: new Date().toISOString(),
+    bio: '',
+    interests: [],
+    date_of_birth: undefined,
+    level: 1,
+    experience: 0,
+    experienceToNextLevel: 100,
+    streak: 0,
+    badges: []
+  };
   
   // Colores del design system siguiendo la paleta de Festech
   const themeColors = {
@@ -129,117 +223,54 @@ export default function ProfileClient() {
     overlay: 'rgba(42, 157, 143, 0.9)', // Primary con transparencia
   };
 
-  // Mock user data - reemplazar con datos reales de Supabase
-  const user: User = {
-    id: "1",
-    name: "María González",
-    email: "maria@example.com",
-    city: "Ibagué, Tolima",
-    profileImage: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150",
-    bio: "Exploradora de sabores tolimenses 🌿",
-    interests: ["Gastronomía", "Aventura", "Cultura"],
-    coins: 1250,
-    following: 45,
-    favorites: 23,
-    // 🎮 Datos de gamificación
-    level: 8,
-    experience: 2340,
-    experienceToNextLevel: 3000,
-    totalReviews: 25,
-    totalPlans: 3,
-    streak: 7, // 7 días consecutivos activo
-    badges: ["explorer", "foodie", "social", "reviewer"],
-  };
-  const [activeTab, setActiveTab] = useState<TabType>("activity");
-  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
-
-  // 🔹 Dummy data (estos luego los jalas de Supabase)
-  const recentActivity: Activity[] = [
-    {
-      id: "1",
-      type: "review",
-      business: "La Fonda Criolla",
-      rating: 5,
-      comment: "Excelente desayuno típico, muy auténtico",
-      date: "2 días",
-      coinsEarned: 15,
-      experienceGained: 25,
-    },
-    {
-      id: "2",
-      type: "plan",
-      title: "Mi día perfecto en Ibagué",
-      services: 3,
-      date: "5 días",
-      coinsEarned: 10,
-      experienceGained: 20,
-    },
-    {
-      id: "3",
-      type: "coupon",
-      business: "Café del Centro",
-      title: "Cupón de 20% descuento usado",
-      date: "1 semana",
-      coinsEarned: 0,
-      experienceGained: 10,
-    },
-    {
-      id: "4",
-      type: "achievement",
-      title: "¡Nuevo logro desbloqueado: Crítico!",
-      date: "1 semana",
-      coinsEarned: 25,
-      experienceGained: 50,
-    },
-  ];
-
+  // Datos mock para los elementos que aún no están implementados
   const achievements: Achievement[] = [
     { 
       icon: "🏆", 
       title: "Explorador", 
       desc: "Visitó 10 lugares diferentes",
-      isUnlocked: true,
-      progress: 10,
+      isUnlocked: (currentUser.stats?.followingCount || 0) >= 10,
+      progress: currentUser.stats?.followingCount || 0,
       maxProgress: 10,
     },
     { 
       icon: "⭐", 
       title: "Crítico", 
       desc: "Dejó 25 reseñas",
-      isUnlocked: true,
-      progress: 25,
+      isUnlocked: (currentUser.stats?.totalReviews || 0) >= 25,
+      progress: currentUser.stats?.totalReviews || 0,
       maxProgress: 25,
     },
     { 
       icon: "💎", 
       title: "VIP", 
       desc: "Acumuló 1000+ coins",
-      isUnlocked: true,
-      progress: 1250,
+      isUnlocked: (currentUser.wallet?.balance || 0) >= 1000,
+      progress: currentUser.wallet?.balance || 0,
       maxProgress: 1000,
     },
     { 
       icon: "📍", 
       title: "Local", 
       desc: "Conoce Ibagué como su casa",
-      isUnlocked: true,
-      progress: 15,
-      maxProgress: 15,
+      isUnlocked: (currentUser.stats?.totalPlans || 0) >= 3,
+      progress: currentUser.stats?.totalPlans || 0,
+      maxProgress: 3,
     },
     { 
       icon: "🔥", 
       title: "Racha", 
       desc: "7 días activo consecutivos",
-      isUnlocked: true,
-      progress: 7,
+      isUnlocked: (currentUser.streak || 0) >= 7,
+      progress: currentUser.streak || 0,
       maxProgress: 7,
     },
     { 
       icon: "👥", 
       title: "Social", 
       desc: "Sigue a 50 negocios",
-      isUnlocked: false,
-      progress: 45,
+      isUnlocked: (currentUser.stats?.followingCount || 0) >= 50,
+      progress: currentUser.stats?.followingCount || 0,
       maxProgress: 50,
     },
   ];
@@ -278,169 +309,7 @@ export default function ProfileClient() {
   ];
 
   // 🗺️ Datos simulados para planes personalizados
-  const customPlans: CustomPlan[] = [
-    {
-      id: "1",
-      title: "Ruta Gastronómica del Centro",
-      description: "Un recorrido perfecto por los mejores sabores del centro histórico de Ibagué",
-      creator: "María González",
-      createdAt: "2024-09-10",
-      totalTime: 240, // 4 horas
-      totalCost: "$$",
-      difficulty: "Fácil",
-      tags: ["Gastronomía", "Centro", "Típico", "Familia"],
-      likes: 45,
-      saves: 23,
-      isPublic: true,
-      coverImage: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=500",
-      businesses: [
-        {
-          id: "b1",
-          name: "La Fonda Criolla",
-          category: "Restaurante",
-          image: "https://images.unsplash.com/photo-1551632436-cbf8dd35adfa?w=300",
-          rating: 4.8,
-          location: "Carrera 3 #12-45",
-          description: "Desayuno típico tolimense auténtico",
-          estimatedTime: 60,
-          priceRange: "$",
-        },
-        {
-          id: "b2", 
-          name: "Café del Centro",
-          category: "Cafetería",
-          image: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=300",
-          rating: 4.5,
-          location: "Calle 10 #4-23",
-          description: "El mejor café de Ibagué en ambiente histórico",
-          estimatedTime: 45,
-          priceRange: "$",
-        },
-        {
-          id: "b3",
-          name: "Mercado Plaza de Bolívar",
-          category: "Mercado",
-          image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=300",
-          rating: 4.3,
-          location: "Plaza de Bolívar",
-          description: "Frutas tropicales y productos locales",
-          estimatedTime: 90,
-          priceRange: "$",
-        },
-        {
-          id: "b4",
-          name: "Restaurante El Bambuco",
-          category: "Restaurante",
-          image: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300",
-          rating: 4.7,
-          location: "Carrera 4 #15-67",
-          description: "Almuerzo tradicional con música folclórica",
-          estimatedTime: 45,
-          priceRange: "$$",
-        },
-      ],
-    },
-    {
-      id: "2",
-      title: "Aventura de Fin de Semana",
-      description: "Experiencia completa de 2 días: naturaleza, cultura y gastronomía",
-      creator: "María González",
-      createdAt: "2024-09-05",
-      totalTime: 960, // 16 horas (2 días)
-      totalCost: "$$$",
-      difficulty: "Moderado",
-      tags: ["Aventura", "Naturaleza", "Cultura", "Fin de semana"],
-      likes: 67,
-      saves: 34,
-      isPublic: true,
-      coverImage: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=500",
-      businesses: [
-        {
-          id: "b5",
-          name: "Hotel Boutique Ambalá",
-          category: "Hospedaje",
-          image: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300",
-          rating: 4.6,
-          location: "Zona Rosa",
-          description: "Hospedaje cómodo con vista a la ciudad",
-          estimatedTime: 720, // tiempo de estadía
-          priceRange: "$$",
-        },
-        {
-          id: "b6",
-          name: "Jardín Botánico San Jorge",
-          category: "Atracción",
-          image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=300",
-          rating: 4.4,
-          location: "Universidad del Tolima",
-          description: "Recorrido por la flora nativa del Tolima",
-          estimatedTime: 120,
-          priceRange: "$",
-        },
-        {
-          id: "b7",
-          name: "Museo de Arte del Tolima",
-          category: "Cultural",
-          image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=300",
-          rating: 4.2,
-          location: "Centro Cultural",
-          description: "Arte y cultura tolimense contemporánea",
-          estimatedTime: 90,
-          priceRange: "$",
-        },
-        {
-          id: "b8",
-          name: "Mirador La Martinica",
-          category: "Atracción",
-          image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300",
-          rating: 4.9,
-          location: "Vía La Martinica",
-          description: "Vista panorámica de Ibagué y el valle",
-          estimatedTime: 30,
-          priceRange: "$",
-        },
-      ],
-    },
-    {
-      id: "3",
-      title: "Noche de Entretenimiento",
-      description: "Plan perfecto para una noche divertida con amigos",
-      creator: "María González", 
-      createdAt: "2024-09-01",
-      totalTime: 180, // 3 horas
-      totalCost: "$$",
-      difficulty: "Fácil",
-      tags: ["Noche", "Entretenimiento", "Amigos", "Música"],
-      likes: 28,
-      saves: 15,
-      isPublic: false,
-      coverImage: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500",
-      businesses: [
-        {
-          id: "b9",
-          name: "Bar La Terraza",
-          category: "Bar",
-          image: "https://images.unsplash.com/photo-1572116469696-31de0f17cc34?w=300",
-          rating: 4.3,
-          location: "Zona Rosa",
-          description: "Cocteles artesanales con música en vivo",
-          estimatedTime: 90,
-          priceRange: "$$",
-        },
-        {
-          id: "b10",
-          name: "Discoteca Ritmo Latino",
-          category: "Entretenimiento",
-          image: "https://images.unsplash.com/photo-1571771019784-3ff35f4f4277?w=300",
-          rating: 4.1,
-          location: "Zona Rosa",
-          description: "La mejor salsa y música tropical de la ciudad",
-          estimatedTime: 90,
-          priceRange: "$$",
-        },
-      ],
-    },
-  ];
+  const customPlans: CustomPlan[] = [];
 
   const getTabText = (tab: TabType): string => {
     switch (tab) {
@@ -458,7 +327,7 @@ export default function ProfileClient() {
   };
 
   // 🎮 Calcular progreso de nivel
-  const levelProgress = (user.experience / user.experienceToNextLevel) * 100;
+  const levelProgress = ((currentUser.experience || 0) / (currentUser.experienceToNextLevel || 100)) * 100;
 
   // 🎮 Generar color de nivel
   const getLevelColor = (level: number): string => {
@@ -531,20 +400,47 @@ export default function ProfileClient() {
     // Navegar a la vista de navegación del plan
   };
 
+  // Función para manejar el logout
+  const handleLogout = () => {
+    Alert.alert(
+      "Cerrar Sesión",
+      "¿Estás seguro de que quieres cerrar sesión?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel"
+        },
+        {
+          text: "Cerrar Sesión",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await signOut();
+              // La navegación se manejará automáticamente por el AuthContext
+            } catch (error) {
+              console.error('Error al cerrar sesión:', error);
+              Alert.alert('Error', 'No se pudo cerrar sesión. Inténtalo de nuevo.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: rating }, (_, i) => (
       <Ionicons key={i} name="star" size={14} color={themeColors.warning} />
     ));
   };
 
-  const renderActivityItem = (act: Activity) => (
+  const renderActivityItem = (act: UserActivity) => (
     <View key={act.id} style={styles.activityCard}>
       {act.type === "review" && (
         <>
           <View style={styles.activityHeader}>
             <Text style={styles.activityTitle}>Reseña en {act.business}</Text>
             <View style={styles.activityReward}>
-              <Text style={styles.activityDate}>{act.date}</Text>
+              <Text style={styles.activityDate}>{act.relativeDate}</Text>
               {act.coinsEarned && (
                 <Text style={[styles.coinsEarned, { color: themeColors.warning }]}>
                   +{act.coinsEarned} 🪙
@@ -568,7 +464,7 @@ export default function ProfileClient() {
           <View style={styles.activityHeader}>
             <Text style={styles.activityTitle}>Plan creado</Text>
             <View style={styles.activityReward}>
-              <Text style={styles.activityDate}>{act.date}</Text>
+              <Text style={styles.activityDate}>{act.relativeDate}</Text>
               {act.coinsEarned && (
                 <Text style={[styles.coinsEarned, { color: themeColors.warning }]}>
                   +{act.coinsEarned} 🪙
@@ -577,9 +473,9 @@ export default function ProfileClient() {
             </View>
           </View>
           <Text style={styles.planTitle}>{act.title}</Text>
-          <Text style={styles.planServices}>
-            {act.services} servicios incluidos
-          </Text>
+          {act.description && (
+            <Text style={styles.planServices}>{act.description}</Text>
+          )}
           {act.experienceGained && (
             <Text style={[styles.experienceGained, { color: themeColors.primary }]}>
               +{act.experienceGained} XP
@@ -591,7 +487,7 @@ export default function ProfileClient() {
         <>
           <View style={styles.activityHeader}>
             <Text style={styles.activityTitle}>Cupón usado en {act.business}</Text>
-            <Text style={styles.activityDate}>{act.date}</Text>
+            <Text style={styles.activityDate}>{act.relativeDate}</Text>
           </View>
           <Text style={styles.planTitle}>{act.title}</Text>
           {act.experienceGained && (
@@ -605,10 +501,10 @@ export default function ProfileClient() {
         <>
           <View style={styles.activityHeader}>
             <Text style={[styles.activityTitle, { color: themeColors.accent }]}>
-              🏆 {act.title}
+              {act.title}
             </Text>
             <View style={styles.activityReward}>
-              <Text style={styles.activityDate}>{act.date}</Text>
+              <Text style={styles.activityDate}>{act.relativeDate}</Text>
               {act.coinsEarned && (
                 <Text style={[styles.coinsEarned, { color: themeColors.warning }]}>
                   +{act.coinsEarned} 🪙
@@ -631,15 +527,42 @@ export default function ProfileClient() {
       case "activity":
         return (
           <View style={styles.tabContent}>
-            {recentActivity.map(renderActivityItem)}
+            {activityLoading ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <Loading />
+                <Text style={{ marginTop: 8, color: colors.text }}>Cargando actividad...</Text>
+              </View>
+            ) : activityError ? (
+              <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                <Text style={{ color: Colors.error, textAlign: 'center' }}>
+                  Error al cargar actividad
+                </Text>
+                <TouchableOpacity 
+                  style={{ marginTop: 8, padding: 8 }}
+                  onPress={() => authUser?.id && loadActivity(authUser.id)}
+                >
+                  <Text style={{ color: Colors.primary }}>Reintentar</Text>
+                </TouchableOpacity>
+              </View>
+            ) : activities.length > 0 ? (
+              activities.map(renderActivityItem)
+            ) : (
+              <Text style={styles.emptyText}>No hay actividad reciente</Text>
+            )}
           </View>
         );
-      case "favorites":
-        return (
-          <View style={styles.tabContent}>
-            <Text style={styles.emptyText}>No tienes favoritos aún</Text>
-          </View>
-        );
+        case "favorites":
+          return (
+            <View style={styles.tabContent}>
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyIcon}>❤️</Text>
+                <Text style={styles.emptyTitle}>No tienes favoritos aún</Text>
+                <Text style={styles.emptySubtitle}>
+                  Los videos que marques como favoritos aparecerán aquí
+                </Text>
+              </View>
+            </View>
+          );
       case "plans":
         return (
           <View style={styles.tabContent}>
@@ -874,29 +797,48 @@ export default function ProfileClient() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={Colors.primary}
+        />
+      }
+    >
       {/* 🔹 Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Mi Perfil</Text>
-          <TouchableOpacity style={styles.settingsBtn}>
-            <Ionicons name="settings-outline" size={24} color="white" />
+          <TouchableOpacity 
+            style={styles.settingsBtn}
+            onPress={handleLogout}
+            disabled={authLoading}
+          >
+            <Ionicons 
+              name="log-out-outline" 
+              size={24} 
+              color="white" 
+            />
           </TouchableOpacity>
         </View>
 
         {/* 🔹 Info */}
         <View style={styles.profileInfo}>
           <Image
-            source={{ uri: user.profileImage }}
+            source={{ 
+              uri: currentUser.avatar_url || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150'
+            }}
             style={styles.profileImage}
           />
           <View style={styles.profileDetails}>
-            <Text style={styles.profileName}>{user.name}</Text>
+            <Text style={styles.profileName}>{currentUser.full_name}</Text>
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={16} color="white" />
-              <Text style={styles.locationText}>{user.city}</Text>
+              <Text style={styles.locationText}>{currentUser.city}</Text>
             </View>
-            <Text style={styles.profileBio}>{user.bio}</Text>
+            <Text style={styles.profileBio}>{currentUser.bio || 'Sin biografía'}</Text>
           </View>
           <TouchableOpacity style={styles.editBtn}>
             <Ionicons name="pencil-outline" size={20} color="white" />
@@ -906,24 +848,24 @@ export default function ProfileClient() {
         {/* 🔹 Stats gamificados */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <View style={[styles.levelBadge, { backgroundColor: getLevelColor(user.level) }]}>
-              <Text style={styles.levelText}>LV{user.level}</Text>
+            <View style={[styles.levelBadge, { backgroundColor: getLevelColor(currentUser.level || 1) }]}>
+              <Text style={styles.levelText}>LV{currentUser.level || 1}</Text>
             </View>
             <Text style={styles.statLabel}>Nivel</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{user.coins}</Text>
+            <Text style={styles.statNumber}>{currentUser.wallet?.balance || 0}</Text>
             <Text style={styles.statLabel}>Coins</Text>
           </View>
           <View style={styles.statItem}>
             <View style={styles.streakContainer}>
-              <Text style={styles.streakNumber}>{user.streak}</Text>
+              <Text style={styles.streakNumber}>{currentUser.streak || 0}</Text>
               <Text style={styles.streakIcon}>🔥</Text>
             </View>
             <Text style={styles.statLabel}>Racha</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{user.following}</Text>
+            <Text style={styles.statNumber}>{currentUser.stats?.followingCount || 0}</Text>
             <Text style={styles.statLabel}>Siguiendo</Text>
           </View>
         </View>
@@ -932,10 +874,10 @@ export default function ProfileClient() {
         <View style={styles.progressContainer}>
           <View style={styles.progressInfo}>
             <Text style={styles.progressText}>
-              {user.experience}/{user.experienceToNextLevel} XP
+              {currentUser.experience || 0}/{currentUser.experienceToNextLevel || 100} XP
             </Text>
             <Text style={styles.progressNext}>
-              {user.experienceToNextLevel - user.experience} para nivel {user.level + 1}
+              {(currentUser.experienceToNextLevel || 100) - (currentUser.experience || 0)} para nivel {(currentUser.level || 1) + 1}
             </Text>
           </View>
           <View style={styles.progressBar}>
@@ -944,7 +886,7 @@ export default function ProfileClient() {
                 styles.progressFill, 
                 { 
                   width: `${levelProgress}%`,
-                  backgroundColor: getLevelColor(user.level)
+                  backgroundColor: getLevelColor(currentUser.level || 1)
                 }
               ]}
             />
@@ -953,7 +895,7 @@ export default function ProfileClient() {
 
         {/* 🔹 Interests */}
         <View style={styles.interestsContainer}>
-          {user.interests.map((interest, index) => (
+          {(currentUser.interests || []).map((interest: string, index: number) => (
             <View key={`${interest}-${index}`} style={styles.interestTag}>
               <Text style={styles.interestText}>{interest}</Text>
             </View>
@@ -1652,5 +1594,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: 20,
+  },
+  // Estilos para contenedores vacíos mejorados
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+    color: Colors.secondary,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 20,
+    color: Colors.gray600,
   },
 });

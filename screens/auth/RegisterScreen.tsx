@@ -20,8 +20,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // Tipos de usuario disponibles
 const USER_TYPES = [
-  { id: 'client', label: 'Cliente', description: 'Busco servicios de fitness' },
-  { id: 'business', label: 'Negocio', description: 'Ofrezco servicios de fitness' },
+  { id: 'client', label: 'Cliente', description: 'Busco servicios' },
+  { id: 'business', label: 'Negocio', description: 'Ofrezco servicios' },
 ];
 
 // Categorías de intereses disponibles según la documentación de la BD
@@ -301,7 +301,7 @@ export default function RegisterScreen() {
             <View style={styles.header}>
               <Text style={styles.title}>Crear Cuenta</Text>
               <Text style={styles.subtitle}>
-                Únete a la comunidad de fitness
+                Únete a la comunidad
               </Text>
             </View>
 

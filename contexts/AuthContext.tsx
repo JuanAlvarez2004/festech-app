@@ -1,7 +1,101 @@
-import { getUserProfile, supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import type { AuthState, Profile } from '@/types';
 import { Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useState } from 'react';
+
+// Helper para obtener el perfil completo del usuario con manejo robusto
+export const getUserProfileRobust = async (userId: string) => {
+  try {
+    console.log('Buscando perfil para usuario:', userId);
+    
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId);
+    
+    console.log('Resultado consulta perfil:', { data, error });
+    
+    if (error) {
+      console.error('Error consultando perfil:', error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      console.log('❌ No se encontró perfil para usuario:', userId);
+      return null;
+    }
+    
+    console.log('✅ Perfil encontrado:', data[0]);
+    return data[0];
+  } catch (err) {
+    console.error('Error en getUserProfileRobust:', err);
+    throw err;
+  }
+};
+
+// Helper para crear perfil manualmente si los triggers fallan
+export const createUserProfileManual = async (authUser: User) => {
+  try {
+    console.log('🛠️ Creando perfil manual para:', authUser.id);
+    
+    const metadata = authUser.user_metadata || {};
+    const interests = metadata.interests ? metadata.interests.split(',') : [];
+    
+    // Crear perfil
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.id,
+        email: authUser.email || '',
+        full_name: metadata.full_name || 'Usuario',
+        user_type: metadata.user_type || 'client',
+        interests: interests,
+        city: 'Ibagué'
+      })
+      .select()
+      .single();
+    
+    if (profileError) {
+      console.error('Error creando perfil manual:', profileError);
+      throw profileError;
+    }
+    
+    console.log('✅ Perfil creado manualmente:', profile);
+    
+    // Crear wallet si es cliente
+    if (metadata.user_type === 'client' || !metadata.user_type) {
+      const { error: walletError } = await supabase
+        .from('wallets')
+        .insert({
+          user_id: authUser.id,
+          balance: 50
+        });
+      
+      if (walletError) {
+        console.error('Error creando wallet:', walletError);
+      } else {
+        console.log('✅ Wallet creado manualmente');
+        
+        // Crear transacción de bienvenida
+        await supabase
+          .from('coin_transactions')
+          .insert({
+            user_id: authUser.id,
+            amount: 50,
+            type: 'earn',
+            description: 'Bonus de bienvenida por registrarte'
+          });
+        
+        console.log('✅ Transacción de bienvenida creada');
+      }
+    }
+    
+    return profile;
+  } catch (err) {
+    console.error('Error en createUserProfileManual:', err);
+    throw err;
+  }
+};
 
 interface AuthContextType extends AuthState {
   signIn: (email: string, password: string) => Promise<void>;
@@ -52,8 +146,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
       
-      const profile = await getUserProfile(authUser.id);
-      setUser(profile);
+      console.log('🔍 Cargando perfil para usuario:', authUser.id);
+      
+      const profile = await getUserProfileRobust(authUser.id);
+      
+      if (!profile) {
+        console.log('⚠️ Perfil no encontrado, intentando crear...');
+        // Intentar crear perfil manualmente
+        await createUserProfileManual(authUser);
+        
+        // Reintentar obtener perfil
+        const newProfile = await getUserProfileRobust(authUser.id);
+        setUser(newProfile);
+      } else {
+        setUser(profile);
+      }
     } catch (err) {
       console.error('Error loading user profile:', err);
       setError('Error al cargar el perfil del usuario');
@@ -89,7 +196,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(true);
       setError(null);
 
-      // Registrar usuario en Supabase Auth
+      console.log('Intentando registrar usuario:', { email, userData });
+
+      // Convertir interests array a string para metadata
+      const interestsString = Array.isArray(userData.interests) 
+        ? userData.interests.join(',') 
+        : '';
+
+      // Registrar usuario en Supabase Auth con options específicas
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -97,50 +211,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             full_name: userData.full_name,
             user_type: userData.user_type,
-            interests: userData.interests,
+            interests: interestsString,
           },
+          emailRedirectTo: undefined, // Evitar redirects
         },
       });
 
-      if (error) throw error;
+      console.log('Respuesta de signUp:', { data, error });
+
+      if (error) {
+        console.error('Error en signUp:', error);
+        throw error;
+      }
 
       // Verificar si el usuario fue creado correctamente
       if (!data.user) {
         throw new Error('No se pudo crear el usuario');
       }
 
-      // Verificar si hay sesión inmediata (email confirmation disabled)
+      console.log('Usuario creado:', data.user.id);
+
+      // Esperar un momento para que los triggers se ejecuten
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Verificar que el perfil se creó correctamente
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      console.log('Perfil encontrado:', { profile, profileError });
+
+      // Si hay sesión, cargar el perfil
       if (data.session) {
-        // Email confirmation está desactivada - proceso normal
-        // Esperar un poco para que el trigger se ejecute
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Actualizar el perfil con los intereses si fueron proporcionados
-        if (userData.interests && userData.interests.length > 0) {
-          await supabase
-            .from('profiles')
-            .update({ interests: userData.interests })
-            .eq('id', data.user.id);
-        }
-        
+        console.log('Sesión creada, cargando perfil...');
         await loadUserProfile(data.user);
       } else {
-        // Email confirmation está activada - simular éxito para desarrollo
-        console.log('Usuario creado, esperando confirmación de email:', data.user.email);
-        
-        // Para desarrollo, podemos mostrar un mensaje diferente o intentar login automático
-        // En lugar de fallar, vamos a permitir que continúe
-        setUser(null); // No hay sesión hasta confirmar email
-        setLoading(false);
-        
-        // Retornar sin error para no bloquear el flujo
-        return;
+        console.log('No hay sesión inmediata, usuario necesita confirmación');
+        // No fallar, simplemente informar que se creó el usuario
+        setUser(null);
       }
 
     } catch (err: any) {
-      console.error('SignUp error:', err);
-      setError(err.message || 'Error al registrar usuario');
-      throw err;
+      console.error('SignUp error completo:', err);
+      
+      // Manejo específico de errores de Supabase
+      let errorMessage = 'Error al crear la cuenta';
+      
+      if (err.message?.includes('Database error')) {
+        errorMessage = 'Error en la base de datos. Verifica la configuración de Supabase.';
+      } else if (err.message?.includes('User already registered')) {
+        errorMessage = 'Este email ya está registrado. Intenta iniciar sesión.';
+      } else if (err.message?.includes('Password')) {
+        errorMessage = 'La contraseña debe tener al menos 6 caracteres.';
+      } else if (err.message?.includes('email')) {
+        errorMessage = 'Por favor ingresa un email válido.';
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }
