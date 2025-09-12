@@ -105,19 +105,30 @@ export default function Input({
     paddingTop: multiline && Platform.OS === 'android' ? Spacing.sm : 0,
   });
 
-  const renderIcon = (iconName: string, onPress?: () => void) => (
-    <TouchableOpacity 
-      onPress={onPress}
-      style={styles.iconContainer}
-      disabled={!onPress}
-    >
-      <IconSymbol 
-        name={iconName} 
-        size={20} 
-        color={colors.icon} 
-      />
-    </TouchableOpacity>
-  );
+  const renderIcon = (iconName: string, onPress?: () => void) => {
+    // Validar que el icono existe en el mapping
+    const validIconNames = [
+      'envelope', 'lock', 'eye', 'eye.slash', 'person', 'building.2'
+    ];
+    
+    const validIconName = validIconNames.includes(iconName) 
+      ? iconName as any
+      : 'circle'; // fallback
+    
+    return (
+      <TouchableOpacity 
+        onPress={onPress}
+        style={styles.iconContainer}
+        disabled={!onPress}
+      >
+        <IconSymbol 
+          name={validIconName} 
+          size={20} 
+          color={colors.icon} 
+        />
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <View style={[styles.container, style]}>

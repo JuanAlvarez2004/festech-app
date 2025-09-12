@@ -43,6 +43,21 @@ const MAPPING = {
   'building.2': 'business',
   'tag': 'label',
   'circle': 'radio-button-unchecked',
+  
+  // Iconos para formularios
+  'envelope': 'email',
+  'lock': 'lock',
+  'eye': 'visibility',
+  'eye.slash': 'visibility-off',
+  
+  // Iconos para categorías de turismo
+  'fork.knife': 'restaurant',
+  'bed.double': 'hotel',
+  'mountain.2': 'terrain',
+  'building.columns': 'account-balance',
+  'bag': 'shopping-bag',
+  'moon.stars': 'nightlight',
+  'leaf': 'eco',
 } as const;
 
 /**

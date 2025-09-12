@@ -1,30 +1,29 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Image,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-} from 'react-native';
 import {
   ArrowLeft,
-  Star,
-  MessageCircle,
-  Users,
-  MapPin,
-  Phone,
-  Clock,
-  Edit3,
-  Settings,
-  Upload,
   BarChart3,
+  Edit3,
   Eye,
+  Facebook,
   Heart,
   Instagram,
-  Facebook,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Settings,
+  Star,
+  Upload,
+  Users
 } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -82,6 +81,20 @@ interface BusinessData {
     instagram: string;
     facebook: string;
   };
+  // 🎮 Gamificación para empresarios
+  businessLevel: number;
+  businessExperience: number;
+  businessExperienceToNext: number;
+  totalViews: number;
+  totalEngagement: number;
+  badges: string[];
+  streak: number; // Días consecutivos con actividad
+  rank: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
+  monthlyTarget: {
+    views: number;
+    followers: number;
+    engagement: number;
+  };
 }
 
 interface Stats {
@@ -115,14 +128,18 @@ export default function BusinessDetail({
   const [activeTab, setActiveTab] = useState<TabType>('videos');
   const [isFollowing, setIsFollowing] = useState(false);
 
-  // Colores personalizados para elementos específicos
+  // Colores personalizados para elementos específicos siguiendo el design system
   const themeColors = {
     primary: colors.tint,
-    warning: '#FFB800',
-    success: '#10B981',
+    warning: '#FFC107', // Del design system
+    success: '#28A745', // Del design system
+    error: '#DC3545', // Del design system
+    info: '#17A2B8', // Del design system
     onPrimary: '#FFFFFF',
     onOverlay: '#FFFFFF',
     textTertiary: colors.textSecondary,
+    accent: '#E9C46A', // Color accent del design system
+    secondary: '#264653', // Color secondary del design system
   };
 
   // 🚀 MOCK DATA
@@ -156,7 +173,21 @@ export default function BusinessDetail({
     social: {
       instagram: '@lafondacriolla',
       facebook: 'La Fonda Criolla Ibagué'
-    }
+    },
+    // 🎮 Datos de gamificación para empresarios
+    businessLevel: 12,
+    businessExperience: 8500,
+    businessExperienceToNext: 10000,
+    totalViews: 125000,
+    totalEngagement: 15600,
+    badges: ['top_rated', 'viral_creator', 'community_favorite', 'consistent_poster'],
+    streak: 21, // 21 días consecutivos con actividad
+    rank: 'Gold',
+    monthlyTarget: {
+      views: 15000,
+      followers: 200,
+      engagement: 1200,
+    },
   };
 
   const videos: Video[] = [
@@ -237,6 +268,34 @@ export default function BusinessDetail({
 
   const calculateGrowth = (current: number, previous: number): string => {
     return ((current - previous) / previous * 100).toFixed(1);
+  };
+
+  // 🎮 Funciones de gamificación para empresarios
+  const getBusinessLevelProgress = (): number => {
+    return (businessData.businessExperience / businessData.businessExperienceToNext) * 100;
+  };
+
+  const getRankColor = (rank: string): string => {
+    switch (rank) {
+      case 'Bronze': return '#CD7F32';
+      case 'Silver': return '#C0C0C0';
+      case 'Gold': return '#FFD700';
+      case 'Platinum': return '#E5E4E2';
+      case 'Diamond': return '#B9F2FF';
+      default: return themeColors.primary;
+    }
+  };
+
+  const getBadgeInfo = (badgeId: string) => {
+    const badges: Record<string, { icon: string; title: string; desc: string }> = {
+      'top_rated': { icon: '⭐', title: 'Top Rated', desc: 'Calificación promedio 4.5+' },
+      'viral_creator': { icon: '🚀', title: 'Viral Creator', desc: 'Video con 10k+ vistas' },
+      'community_favorite': { icon: '❤️', title: 'Community Favorite', desc: '500+ seguidores' },
+      'consistent_poster': { icon: '📅', title: 'Consistent Poster', desc: '30 días activo' },
+      'engagement_king': { icon: '👑', title: 'Engagement King', desc: '80%+ engagement rate' },
+      'growth_master': { icon: '📈', title: 'Growth Master', desc: '100+ seguidores/mes' },
+    };
+    return badges[badgeId] || { icon: '🏆', title: 'Achievement', desc: 'Logro desbloqueado' };
   };
 
   const getTabText = (tab: TabType): string => {
@@ -425,8 +484,8 @@ export default function BusinessDetail({
           Resumen de este mes
         </Text>
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { backgroundColor: '#EBF8FF' }]}>
-            <Text style={[styles.statNumber, { color: '#1E40AF' }]}>
+          <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
+            <Text style={[styles.statNumber, { color: themeColors.primary }]}>
               {stats.thisMonth.views.toLocaleString()}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -436,8 +495,8 @@ export default function BusinessDetail({
               +{calculateGrowth(stats.thisMonth.views, stats.lastMonth.views)}%
             </Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#FEF2F2' }]}>
-            <Text style={[styles.statNumber, { color: '#DC2626' }]}>
+          <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
+            <Text style={[styles.statNumber, { color: themeColors.error }]}>
               {stats.thisMonth.likes}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -447,8 +506,8 @@ export default function BusinessDetail({
               +{calculateGrowth(stats.thisMonth.likes, stats.lastMonth.likes)}%
             </Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#F3E8FF' }]}>
-            <Text style={[styles.statNumber, { color: '#7C3AED' }]}>
+          <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
+            <Text style={[styles.statNumber, { color: themeColors.secondary }]}>
               {stats.thisMonth.newFollowers}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -458,8 +517,8 @@ export default function BusinessDetail({
               +{calculateGrowth(stats.thisMonth.newFollowers, stats.lastMonth.newFollowers)}%
             </Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#ECFDF5' }]}>
-            <Text style={[styles.statNumber, { color: '#059669' }]}>
+          <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
+            <Text style={[styles.statNumber, { color: themeColors.accent }]}>
               {stats.thisMonth.conversions}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -716,6 +775,136 @@ export default function BusinessDetail({
             </>
           )}
         </View>
+
+        {/* 🎮 Sección de gamificación para empresarios */}
+        {isOwnerView && (
+          <View style={styles.businessLevelContainer}>
+            <View style={styles.businessLevelRow}>
+              <View style={styles.businessLevelBadge}>
+                <Text style={{ fontSize: 16 }}>🏢</Text>
+                <Text style={[styles.businessLevelText, { color: themeColors.primary }]}>
+                  Nivel {businessData.businessLevel}
+                </Text>
+              </View>
+              <Text style={[styles.businessExperienceText, { color: colors.textSecondary }]}>
+                {businessData.businessExperience}/{businessData.businessExperienceToNext} XP
+              </Text>
+            </View>
+            
+            <View style={styles.businessProgressContainer}>
+              <View style={styles.businessProgressBar}>
+                <View 
+                  style={[
+                    styles.businessProgressFill,
+                    { width: `${getBusinessLevelProgress()}%` }
+                  ]} 
+                />
+              </View>
+            </View>
+
+            <View style={styles.businessRankContainer}>
+              <Text style={[styles.businessRankIcon, { color: getRankColor(businessData.rank) }]}>
+                👑
+              </Text>
+              <Text style={[styles.businessRankText, { color: colors.text }]}>
+                Rango {businessData.rank}
+              </Text>
+            </View>
+
+            <View style={styles.businessStreakContainer}>
+              <Text style={styles.businessStreakIcon}>🔥</Text>
+              <Text style={[styles.businessStreakText, { color: colors.text }]}>
+                {businessData.streak} días activo
+              </Text>
+            </View>
+
+            {businessData.badges && businessData.badges.length > 0 && (
+              <View style={styles.businessBadgesContainer}>
+                <Text style={[styles.businessBadgesTitle, { color: colors.text }]}>
+                  Logros Recientes
+                </Text>
+                <View style={styles.businessBadgesGrid}>
+                  {businessData.badges.slice(0, 3).map((badgeId, index) => {
+                    const badge = getBadgeInfo(badgeId);
+                    return (
+                      <View key={index} style={styles.businessBadgeItem}>
+                        <Text style={styles.businessBadgeIcon}>{badge.icon}</Text>
+                        <Text style={[styles.businessBadgeText, { color: colors.text }]}>
+                          {badge.title}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            {businessData.monthlyTarget && (
+              <View style={styles.businessTargetsContainer}>
+                <Text style={[styles.businessTargetsTitle, { color: colors.text }]}>
+                  Objetivos del Mes
+                </Text>
+                
+                <View style={styles.businessTargetItem}>
+                  <View style={styles.businessTargetHeader}>
+                    <Text style={[styles.businessTargetLabel, { color: colors.text }]}>
+                      👁️ Visualizaciones
+                    </Text>
+                    <Text style={[styles.businessTargetValue, { color: themeColors.primary }]}>
+                      {businessData.totalViews.toLocaleString()}/{businessData.monthlyTarget.views.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.businessTargetProgress}>
+                    <View 
+                      style={[
+                        styles.businessTargetFill,
+                        { width: `${Math.min(100, (businessData.totalViews / businessData.monthlyTarget.views) * 100)}%` }
+                      ]} 
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.businessTargetItem}>
+                  <View style={styles.businessTargetHeader}>
+                    <Text style={[styles.businessTargetLabel, { color: colors.text }]}>
+                      👥 Seguidores
+                    </Text>
+                    <Text style={[styles.businessTargetValue, { color: themeColors.primary }]}>
+                      {businessData.followers.toLocaleString()}/{businessData.monthlyTarget.followers.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.businessTargetProgress}>
+                    <View 
+                      style={[
+                        styles.businessTargetFill,
+                        { width: `${Math.min(100, (businessData.followers / businessData.monthlyTarget.followers) * 100)}%` }
+                      ]} 
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.businessTargetItem}>
+                  <View style={styles.businessTargetHeader}>
+                    <Text style={[styles.businessTargetLabel, { color: colors.text }]}>
+                      💬 Engagement
+                    </Text>
+                    <Text style={[styles.businessTargetValue, { color: themeColors.primary }]}>
+                      {Math.round((businessData.totalEngagement / businessData.totalViews) * 100)}%/{businessData.monthlyTarget.engagement}%
+                    </Text>
+                  </View>
+                  <View style={styles.businessTargetProgress}>
+                    <View 
+                      style={[
+                        styles.businessTargetFill,
+                        { width: `${Math.min(100, ((businessData.totalEngagement / businessData.totalViews) * 100 / businessData.monthlyTarget.engagement) * 100)}%` }
+                      ]} 
+                    />
+                  </View>
+                </View>
+              </View>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Tabs */}
@@ -918,5 +1107,369 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.5,
+  },
+  // 🎮 Estilos de gamificación para empresarios
+  businessLevelContainer: {
+    backgroundColor: 'rgba(42, 157, 143, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginVertical: 8,
+  },
+  businessLevelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  businessLevelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(42, 157, 143, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  businessLevelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginLeft: 4,
+  },
+  businessExperienceText: {
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  businessProgressContainer: {
+    marginTop: 4,
+  },
+  businessProgressBar: {
+    height: 6,
+    backgroundColor: 'rgba(42, 157, 143, 0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  businessProgressFill: {
+    height: '100%',
+    backgroundColor: '#2A9D8F',
+    borderRadius: 3,
+  },
+  businessRankContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  businessRankIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  businessRankText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  businessStreakContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(233, 196, 106, 0.1)',
+    padding: 8,
+    borderRadius: 8,
+    marginVertical: 4,
+  },
+  businessStreakIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  businessStreakText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  businessBadgesContainer: {
+    marginTop: 12,
+  },
+  businessBadgesTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  businessBadgesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  businessBadgeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(38, 70, 83, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  businessBadgeIcon: {
+    fontSize: 14,
+    marginRight: 4,
+  },
+  businessBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  businessTargetsContainer: {
+    marginTop: 16,
+  },
+  businessTargetsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  businessTargetItem: {
+    backgroundColor: 'rgba(42, 157, 143, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  businessTargetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  businessTargetLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  businessTargetValue: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  businessTargetProgress: {
+    height: 4,
+    backgroundColor: 'rgba(42, 157, 143, 0.2)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  businessTargetFill: {
+    height: '100%',
+    backgroundColor: '#2A9D8F',
+    borderRadius: 2,
+  },
+  // Estilos para videos (que estaban faltando)
+  videoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: 8,
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  videoStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  videoStatItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  videoStatText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 2,
+  },
+  videoDate: {
+    fontSize: 10,
+    opacity: 0.8,
+  },
+  // Estilos para información (que estaban faltando)
+  infoSection: {
+    padding: 16,
+    marginVertical: 4,
+    borderRadius: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  contactText: {
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  whatsappIcon: {
+    fontSize: 16,
+  },
+  // Estilos para upload
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    margin: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  uploadText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  // Estilos adicionales para info y reviews
+  hoursItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  hoursDay: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  hoursTime: {
+    fontSize: 14,
+  },
+  servicesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  serviceItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 4,
+  },
+  serviceText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  priceRange: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginVertical: 8,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reviewUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  verifiedBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  // Estilos para estadísticas de propietarios
+  statsSection: {
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: '45%',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  statLabel: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  statGrowth: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  // Estilos adicionales para métricas de engagement
+  engagementItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  engagementLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  engagementValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  // Estilos para videos top
+  topVideoItem: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  topVideoThumb: {
+    width: 60,
+    height: 40,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  topVideoInfo: {
+    flex: 1,
+  },
+  topVideoTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  topVideoStats: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  topVideoStat: {
+    fontSize: 12,
+  },
+  // Contenedor de videos
+  videosContainer: {
+    padding: 0,
+  },
+  // Botones de acción
+  primaryBtn: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  primaryBtnText: {
+    fontWeight: '600',
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  secondaryBtnText: {
+    marginLeft: 6,
+    fontWeight: '600',
   },
 });

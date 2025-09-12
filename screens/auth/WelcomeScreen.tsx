@@ -2,12 +2,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
 import {
-    Dimensions,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    View,
+  Dimensions,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui';
 import { Spacing, Typography } from '@/constants/Design';
@@ -17,11 +17,11 @@ const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const handleGetStarted = () => {
-    router.push('/(auth)/login');
+    router.push('/auth/login' as any);
   };
 
   const handleSignUp = () => {
-    router.push('/(auth)/register');
+    router.push('/auth/register' as any);
   };
 
   return (

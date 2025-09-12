@@ -1,11 +1,23 @@
+import { Loading } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useTabAuthGuard } from '@/hooks/useTabAuthGuard';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 export default function InboxScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { shouldShowContent } = useTabAuthGuard('inbox');
+
+  // Si no está autenticado, mostrar loading hasta que se resuelva
+  if (!shouldShowContent) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <Loading />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

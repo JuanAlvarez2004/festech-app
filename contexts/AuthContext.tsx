@@ -95,33 +95,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
         options: {
           data: {
-            full_name: userData.fullName,
-            user_type: userData.userType,
+            full_name: userData.full_name,
+            user_type: userData.user_type,
+            interests: userData.interests,
           },
         },
       });
 
       if (error) throw error;
 
-      // Si el registro fue exitoso, crear el perfil
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email!,
-            full_name: userData.fullName,
-            user_type: userData.userType,
-            phone: userData.phone,
-            interests: userData.interests || [],
-          });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          // No lanzamos error aquí porque el usuario ya fue creado
-        }
+      // Verificar si el usuario fue creado correctamente
+      if (!data.user) {
+        throw new Error('No se pudo crear el usuario');
       }
+
+      // Verificar si hay sesión inmediata (email confirmation disabled)
+      if (data.session) {
+        // Email confirmation está desactivada - proceso normal
+        // Esperar un poco para que el trigger se ejecute
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Actualizar el perfil con los intereses si fueron proporcionados
+        if (userData.interests && userData.interests.length > 0) {
+          await supabase
+            .from('profiles')
+            .update({ interests: userData.interests })
+            .eq('id', data.user.id);
+        }
+        
+        await loadUserProfile(data.user);
+      } else {
+        // Email confirmation está activada - simular éxito para desarrollo
+        console.log('Usuario creado, esperando confirmación de email:', data.user.email);
+        
+        // Para desarrollo, podemos mostrar un mensaje diferente o intentar login automático
+        // En lugar de fallar, vamos a permitir que continúe
+        setUser(null); // No hay sesión hasta confirmar email
+        setLoading(false);
+        
+        // Retornar sin error para no bloquear el flujo
+        return;
+      }
+
     } catch (err: any) {
+      console.error('SignUp error:', err);
       setError(err.message || 'Error al registrar usuario');
       throw err;
     } finally {

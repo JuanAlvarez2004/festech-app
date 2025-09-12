@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import React, { useCallback, useRef, useState } from 'react';
 import {
-  Alert,
-  Dimensions,
-  FlatList,
-  StatusBar,
-  StyleSheet,
-  View,
+    Alert,
+    Dimensions,
+    FlatList,
+    StatusBar,
+    StyleSheet,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -14,6 +14,7 @@ import { Loading, VideoCard } from '@/components/ui';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthRequired } from '@/hooks/useAuthRequired';
 import type { VideoWithBusiness } from '@/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -90,6 +91,7 @@ export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { user, loading } = useAuth();
+  const { requireAuth } = useAuthRequired();
   
   const [videos, setVideos] = useState<VideoWithBusiness[]>(MOCK_VIDEOS);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -109,17 +111,19 @@ export default function HomeScreen() {
 
   // Acciones de video
   const handleLike = (videoId: string) => {
-    setVideos(prevVideos => 
-      prevVideos.map(video => 
-        video.id === videoId 
-          ? { 
-              ...video, 
-              liked: !video.liked,
-              likes_count: video.liked ? video.likes_count - 1 : video.likes_count + 1 
-            }
-          : video
-      )
-    );
+    requireAuth(() => {
+      setVideos(prevVideos => 
+        prevVideos.map(video => 
+          video.id === videoId 
+            ? { 
+                ...video, 
+                liked: !video.liked,
+                likes_count: video.liked ? video.likes_count - 1 : video.likes_count + 1 
+              }
+            : video
+        )
+      );
+    });
   };
 
   const handleShare = (video: VideoWithBusiness) => {
@@ -134,21 +138,19 @@ export default function HomeScreen() {
   };
 
   const handleComment = (video: VideoWithBusiness) => {
-    Alert.alert('Comentarios', 'Próximamente: Sistema de comentarios');
+    requireAuth(() => {
+      Alert.alert('Comentarios', 'Próximamente: Sistema de comentarios');
+    });
   };
 
   const handleBusinessPress = (video: VideoWithBusiness) => {
-    router.push({
-      pathname: '/business/[id]',
-      params: { id: video.business_id }
-    });
+    // Usar la ruta del tab businessDetail
+    router.push('/(tabs)/businessDetail' as any);
   };
 
   const handleUserPress = (video: VideoWithBusiness) => {
-    router.push({
-      pathname: '/profile/[id]',
-      params: { id: video.business.owner_id }
-    });
+    // Usar la ruta del tab clientProfile
+    router.push('/(tabs)/clientProfile' as any);
   };
 
   const handleRefresh = async () => {
