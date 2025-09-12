@@ -1,112 +1,362 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+import Input from '@/components/ui/Input';
+import SearchFilters from '@/components/ui/SearchFilters';
+import SearchResults from '@/components/ui/SearchResults';
+import { BorderRadius, Spacing, Typography } from '@/constants/Design';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useSearchFilters } from '@/hooks/useSearchFilters';
+import type { VideoWithBusiness } from '@/types';
+import React, { useState } from 'react';
+import {
+  Alert,
+  Dimensions,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-export default function TabTwoScreen() {
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+export default function ExploreScreen() {
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
+  
+  // Estados locales
+  const [showFilters, setShowFilters] = useState(false);
+  const [quickSearchQuery, setQuickSearchQuery] = useState('');
+  
+  // Hook de filtros y búsqueda
+  const {
+    filters,
+    updateFilters,
+    resetFilters,
+    isLoading,
+    results,
+    totalCount,
+    hasMore,
+    performSearch,
+    loadMore,
+    clearResults,
+    searchByTags,
+    searchByBusinessName,
+    searchWithActiveCoupons,
+    getCurrentLocation,
+    isFiltersEmpty,
+    hasActiveFilters,
+    userLocation,
+  } = useSearchFilters();
+
+  // Manejar búsqueda rápida
+  const handleQuickSearch = async () => {
+    if (!quickSearchQuery.trim()) {
+      Alert.alert('Búsqueda vacía', 'Por favor ingresa algo para buscar.');
+      return;
+    }
+
+    updateFilters({ searchQuery: quickSearchQuery });
+    await performSearch();
+  };
+
+  // Manejar presión de video
+  const handleVideoPress = (video: VideoWithBusiness) => {
+    // TODO: Navegar a pantalla de video o abrir modal
+    console.log('Video pressed:', video.id);
+    Alert.alert('Video seleccionado', `Título: ${video.title}`);
+  };
+
+  // Manejar aplicación de filtros
+  const handleApplyFilters = async () => {
+    await performSearch();
+  };
+
+  // Manejar reset de filtros
+  const handleResetFilters = () => {
+    resetFilters();
+    setQuickSearchQuery('');
+  };
+
+  // Manejar refresh
+  const handleRefresh = async () => {
+    if (hasActiveFilters) {
+      await performSearch();
+    } else {
+      clearResults();
+    }
+  };
+
+  // Quick actions para filtros populares
+  const QuickFilterButtons = () => (
+    <View style={styles.quickFiltersContainer}>
+      <TouchableOpacity
+        style={[
+          styles.quickFilterButton,
+          {
+            backgroundColor: filters.hasActiveCoupon 
+              ? Colors.warning 
+              : colors.backgroundSecondary,
+          },
+        ]}
+        onPress={() => searchWithActiveCoupons()}
+      >
+        <IconSymbol name="tag" size={16} color={filters.hasActiveCoupon ? Colors.white : colors.text} />
+        <Text
+          style={[
+            styles.quickFilterText,
+            {
+              color: filters.hasActiveCoupon ? Colors.white : colors.text,
+            },
+          ]}
+        >
+          Con Cupones
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.quickFilterButton,
+          {
+            backgroundColor: userLocation.latitude 
+              ? Colors.primary 
+              : colors.backgroundSecondary,
+          },
+        ]}
+        onPress={async () => {
+          const success = await getCurrentLocation();
+          if (success && userLocation.latitude && userLocation.longitude) {
+            updateFilters({
+              location: {
+                latitude: userLocation.latitude,
+                longitude: userLocation.longitude,
+                radius: 5,
+              },
+            });
+            await performSearch();
+          }
+        }}
+      >
+        <IconSymbol 
+          name="location" 
+          size={16} 
+          color={userLocation.latitude ? Colors.white : colors.text} 
+        />
+        <Text
+          style={[
+            styles.quickFilterText,
+            {
+              color: userLocation.latitude ? Colors.white : colors.text,
+            },
+          ]}
+        >
+          Cerca de mí
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.quickFilterButton,
+          { backgroundColor: colors.backgroundSecondary },
+        ]}
+        onPress={() => searchByTags(['delicioso'])}
+      >
+        <Text style={[styles.quickFilterText, { color: colors.text }]}>
+          #delicioso
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.quickFilterButton,
+          { backgroundColor: colors.backgroundSecondary },
+        ]}
+        onPress={() => searchByTags(['aventura'])}
+      >
+        <Text style={[styles.quickFilterText, { color: colors.text }]}>
+          #aventura
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  // Resumen de filtros activos
+  const ActiveFiltersHeader = () => {
+    if (!hasActiveFilters) return null;
+
+    return (
+      <View style={[styles.activeFiltersHeader, { backgroundColor: colors.backgroundSecondary }]}>
+        <Text style={[styles.activeFiltersText, { color: colors.text }]}>
+          {totalCount} resultado{totalCount !== 1 ? 's' : ''} encontrado{totalCount !== 1 ? 's' : ''}
+        </Text>
+        <TouchableOpacity onPress={handleResetFilters} style={styles.clearFiltersButton}>
+          <Text style={[styles.clearFiltersText, { color: Colors.primary }]}>
+            Limpiar filtros
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={[styles.header, { borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Explorar
+        </Text>
+        
+        <TouchableOpacity
+          onPress={() => setShowFilters(true)}
+          style={[
+            styles.filtersButton,
+            {
+              backgroundColor: hasActiveFilters ? Colors.primary : colors.backgroundSecondary,
+            },
+          ]}
+        >
+          <IconSymbol 
+            name="magnifyingglass" 
+            size={20} 
+            color={hasActiveFilters ? Colors.white : colors.text} 
+          />
+          {hasActiveFilters && <View style={styles.filtersBadge} />}
+        </TouchableOpacity>
+      </View>
+
+      {/* Búsqueda rápida */}
+      <View style={styles.quickSearchContainer}>
+        <View style={styles.searchInputContainer}>
+          <Input
+            placeholder="Buscar videos, negocios, tags..."
+            value={quickSearchQuery}
+            onChangeText={setQuickSearchQuery}
+            leftIcon="magnifyingglass"
+            rightIcon={quickSearchQuery ? "arrowshape.turn.up.right" : undefined}
+            onRightIconPress={quickSearchQuery ? handleQuickSearch : undefined}
+            style={styles.searchInput}
+          />
+        </View>
+      </View>
+
+      {/* Filtros rápidos */}
+      <QuickFilterButtons />
+
+      {/* Header de filtros activos */}
+      <ActiveFiltersHeader />
+
+      {/* Resultados */}
+      <SearchResults
+        videos={results}
+        isLoading={isLoading}
+        hasMore={hasMore}
+        onVideoPress={handleVideoPress}
+        onLoadMore={loadMore}
+        onRefresh={handleRefresh}
+        emptyStateMessage={
+          hasActiveFilters 
+            ? 'No se encontraron videos con estos filtros'
+            : 'Usa los filtros para buscar videos específicos'
+        }
+      />
+
+      {/* Modal de filtros */}
+      <SearchFilters
+        visible={showFilters}
+        onClose={() => setShowFilters(false)}
+        filters={filters}
+        onFiltersChange={updateFilters}
+        onApplyFilters={handleApplyFilters}
+        onResetFilters={handleResetFilters}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
   },
-  titleContainer: {
+  header: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+  },
+  headerTitle: {
+    fontSize: Typography.size.xl,
+    fontWeight: Typography.weight.bold,
+  },
+  filtersButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  filtersBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.warning,
+  },
+  quickSearchContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  quickFiltersContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
+    gap: Spacing.sm,
+  },
+  quickFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    gap: Spacing.xs,
+  },
+  quickFilterText: {
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
+  },
+  activeFiltersHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  activeFiltersText: {
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
+  },
+  clearFiltersButton: {
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
+  },
+  clearFiltersText: {
+    fontSize: Typography.size.sm,
+    fontWeight: Typography.weight.medium,
   },
 });

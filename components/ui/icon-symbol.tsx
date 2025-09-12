@@ -38,6 +38,11 @@ const MAPPING = {
   'plus.circle.fill': 'add-circle',
   'person': 'person',
   'person.fill': 'person',
+  
+  // Iconos adicionales para filtros
+  'building.2': 'business',
+  'tag': 'label',
+  'circle': 'radio-button-unchecked',
 } as const;
 
 /**

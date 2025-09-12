@@ -44,8 +44,10 @@ export type AuthStackParamList = {
 // Tipos para componentes
 export interface VideoWithBusiness extends Video {
   business: Business;
+  coupon?: Coupon;
   liked?: boolean;
   likesCount?: number;
+  has_active_coupon?: boolean;
 }
 
 export interface BusinessWithOwner extends Business {
