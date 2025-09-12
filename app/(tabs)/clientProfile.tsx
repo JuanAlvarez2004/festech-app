@@ -45,7 +45,20 @@ interface Achievement {
   desc: string;
 }
 
-export default function ProfileClient({ user }: ProfileClientProps) {
+export default function ProfileClient() {
+  // Mock user data - reemplazar con datos reales de Supabase
+  const user: User = {
+    id: "1",
+    name: "María González",
+    email: "maria@example.com",
+    city: "Ibagué, Tolima",
+    profileImage: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150",
+    bio: "Exploradora de sabores tolimenses 🌿",
+    interests: ["Gastronomía", "Aventura", "Cultura"],
+    coins: 1250,
+    following: 45,
+    favorites: 23
+  };
   const [activeTab, setActiveTab] = useState<TabType>("activity");
 
   // 🔹 Dummy data (estos luego los jalas de Supabase)
