@@ -112,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   useEffect(() => {
     // Obtener sesión inicial
@@ -142,7 +143,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadUserProfile = async (authUser: User) => {
+    // Prevent duplicate loads
+    if (loadingProfile || (user && user.id === authUser.id)) {
+      console.log('Profile already loading or loaded for:', authUser.id);
+      return;
+    }
+    
     try {
+      setLoadingProfile(true);
       setLoading(true);
       setError(null);
       
@@ -152,10 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (!profile) {
         console.log('⚠️ Perfil no encontrado, intentando crear...');
-        // Intentar crear perfil manualmente
         await createUserProfileManual(authUser);
-        
-        // Reintentar obtener perfil
         const newProfile = await getUserProfileRobust(authUser.id);
         setUser(newProfile);
       } else {
@@ -167,6 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
     } finally {
       setLoading(false);
+      setLoadingProfile(false);
     }
   };
 

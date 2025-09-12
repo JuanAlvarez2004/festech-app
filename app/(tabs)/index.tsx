@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import {
     Alert,
     Dimensions,
@@ -12,9 +12,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Loading, VideoCard } from '@/components/ui';
 import { Colors } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuthRequired } from '@/hooks/useAuthRequired';
+import { useVideosFromSupabase } from '@/hooks/useVideosFromSupabase';
+import { useLocalVideos } from '@/hooks/useLocalVideos';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import type { VideoWithBusiness } from '@/types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -90,10 +92,25 @@ const MOCK_VIDEOS: VideoWithBusiness[] = [
 export default function HomeScreen() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
-  const { user, loading } = useAuth();
-  const { requireAuth } = useAuthRequired();
-  
-  const [videos, setVideos] = useState<VideoWithBusiness[]>(MOCK_VIDEOS);
+
+  const { videos: supabaseVideos, loading: videosLoading, error: videosError, refreshVideos } = useVideosFromSupabase();
+  const { localVideos, refreshLocalVideos } = useLocalVideos();
+  const [videos, setVideos] = useState<VideoWithBusiness[]>([]);
+
+  // Combine Supabase videos with local and mock data, avoiding duplicates
+  useEffect(() => {
+    if (supabaseVideos.length > 0) {
+      // Remove duplicates by ID
+      const allVideos = [...supabaseVideos, ...localVideos, ...MOCK_VIDEOS];
+      const uniqueVideos = allVideos.filter((video, index, self) => 
+        index === self.findIndex(v => v.id === video.id)
+      );
+      setVideos(uniqueVideos);
+    } else if (!videosLoading) {
+      console.warn('Using local + mock data:', videosError || 'No videos from Supabase');
+      setVideos([...localVideos, ...MOCK_VIDEOS]);
+    }
+  }, [supabaseVideos, videosLoading, videosError, localVideos]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const flatListRef = useRef<FlatList>(null);
@@ -111,19 +128,17 @@ export default function HomeScreen() {
 
   // Acciones de video
   const handleLike = (videoId: string) => {
-    requireAuth(() => {
-      setVideos(prevVideos => 
-        prevVideos.map(video => 
-          video.id === videoId 
-            ? { 
-                ...video, 
-                liked: !video.liked,
-                likes_count: video.liked ? video.likes_count - 1 : video.likes_count + 1 
-              }
-            : video
-        )
-      );
-    });
+    setVideos(prevVideos => 
+      prevVideos.map(video => 
+        video.id === videoId 
+          ? { 
+              ...video, 
+              liked: !video.liked,
+              likes_count: video.liked ? video.likes_count - 1 : video.likes_count + 1 
+            }
+          : video
+      )
+    );
   };
 
   const handleShare = (video: VideoWithBusiness) => {
@@ -138,9 +153,7 @@ export default function HomeScreen() {
   };
 
   const handleComment = (video: VideoWithBusiness) => {
-    requireAuth(() => {
-      Alert.alert('Comentarios', 'Próximamente: Sistema de comentarios');
-    });
+    Alert.alert('Comentarios', 'Próximamente: Sistema de comentarios');
   };
 
   const handleBusinessPress = (video: VideoWithBusiness) => {
@@ -155,10 +168,14 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    // Aquí cargarías nuevos videos desde Supabase
-    setTimeout(() => {
+    try {
+      await refreshLocalVideos();
+      await refreshVideos();
+    } catch (error) {
+      console.error('Error refreshing videos:', error);
+    } finally {
       setRefreshing(false);
-    }, 1000);
+    }
   };
 
   const renderVideoItem = ({ item, index }: { item: VideoWithBusiness; index: number }) => (
@@ -173,13 +190,7 @@ export default function HomeScreen() {
     />
   );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Loading fullScreen text="Cargando videos..." />
-      </SafeAreaView>
-    );
-  }
+
 
   // Si no hay usuario autenticado, mostrar pantalla de bienvenida
   // if (!user) {
