@@ -29,7 +29,7 @@ interface VideoCardProps {
   onUserPress: () => void;
 }
 
-export default function VideoCard({
+const VideoCard = React.memo(function VideoCard({
   video,
   isActive,
   onLike,
@@ -41,6 +41,12 @@ export default function VideoCard({
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const likeAnimation = useRef(new Animated.Value(1)).current;
+
+  // Validar datos del video antes de renderizar
+  if (!video || !video.business) {
+    console.warn('VideoCard: Invalid video data', video);
+    return null;
+  }
 
   // Configurar el reproductor de video con la nueva API
   const player = useVideoPlayer(video.video_url, player => {
@@ -179,7 +185,9 @@ export default function VideoCard({
       </View>
     </View>
   );
-}
+});
+
+export default VideoCard;
 
 const styles = StyleSheet.create({
   container: {

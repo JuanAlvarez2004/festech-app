@@ -1,3 +1,4 @@
+import { router, useLocalSearchParams } from 'expo-router';
 import {
   ArrowLeft,
   BarChart3,
@@ -25,8 +26,11 @@ import {
   View,
 } from 'react-native';
 
+import { Loading } from '@/components/ui';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useBusinessDetail } from '@/hooks/useBusinessDetail';
 
 interface BusinessDetailProps {
   onBack: () => void;
@@ -114,19 +118,94 @@ interface Stats {
   };
 }
 
-export default function BusinessDetail({
-  onBack,
-  onChat,
-  onReviews,
-  onContentUpload,
-  onContentManager,
-  isOwnerView = false,
-}: BusinessDetailProps) {
+export default function BusinessDetail() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const { user } = useAuth();
+  const params = useLocalSearchParams();
+  const businessId = params.businessId as string;
 
   const [activeTab, setActiveTab] = useState<TabType>('videos');
-  const [isFollowing, setIsFollowing] = useState(false);
+
+  // Usar el hook de business detail
+  const {
+    business,
+    videos,
+    stats,
+    isFollowing,
+    loading,
+    error,
+    refreshBusiness,
+    toggleFollow,
+    isOwner
+  } = useBusinessDetail(businessId, user?.id);
+
+  // Funciones de navegación (definir antes de su uso)
+  const handleBack = () => {
+    router.back();
+  };
+
+  const handleChat = () => {
+    // TODO: implementar navegación a chat
+    console.log('Abrir chat con el negocio');
+  };
+
+  const handleContentUpload = () => {
+    // TODO: implementar subida de contenido
+    console.log('Subir contenido');
+  };
+
+  const handleReviews = () => {
+    // TODO: implementar navegación a reseñas
+    console.log('Ver reseñas');
+  };
+
+  // Mostrar loading si está cargando
+  if (loading) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <Loading fullScreen text="Cargando negocio..." />
+      </View>
+    );
+  }
+
+  // Mostrar error si no se encontró el negocio
+  if (error || !business) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.errorContainer, { backgroundColor: colors.background }]}>
+          {/* Header con botón de regreso */}
+          <View style={styles.errorHeader}>
+            <TouchableOpacity
+              style={[styles.backBtn, { backgroundColor: colors.overlay }]}
+              onPress={handleBack}
+            >
+              <ArrowLeft size={22} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+          
+          {/* Contenido del error */}
+          <View style={styles.errorContent}>
+            <Text style={[styles.errorIcon, { color: colors.textSecondary }]}>🏪</Text>
+            <Text style={[styles.errorTitle, { color: colors.text }]}>
+              Negocio no disponible
+            </Text>
+            <Text style={[styles.errorMessage, { color: colors.textSecondary }]}>
+              {error || "No pudimos cargar la información de este negocio en este momento."}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: colors.tint }]}
+              onPress={refreshBusiness}
+            >
+              <Text style={[styles.retryButtonText, { color: colors.background }]}>
+                Intentar de nuevo
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   // Colores personalizados para elementos específicos siguiendo el design system
   const themeColors = {
@@ -142,43 +221,30 @@ export default function BusinessDetail({
     secondary: '#264653', // Color secondary del design system
   };
 
-  // 🚀 MOCK DATA
-  const businessData: BusinessData = {
-    id: 'rest1',
-    name: 'La Fonda Criolla',
-    category: 'Gastronomía',
-    description:
-      'Restaurante tradicional especializado en comida típica tolimense. Más de 20 años sirviendo los mejores sabores de la región.',
-    logo: 'https://images.unsplash.com/photo-1633114128174-2f8aa49759b0?w=150&h=150&fit=crop&crop=center',
-    cover:
-      'https://images.unsplash.com/photo-1723693407703-f42009db4cd7?w=400&h=200&fit=crop',
-    rating: 4.8,
-    totalReviews: 156,
-    followers: 2340,
-    isVerified: true,
-    address: 'Carrera 3 #12-45, Centro Histórico',
-    phone: '+57 318 456 7890',
-    whatsapp: '+57 318 456 7890',
-    hours: {
-      'Lun-Vie': '6:00 AM - 10:00 PM',
-      'Sáb-Dom': '6:00 AM - 11:00 PM'
-    },
-    services: [
-      'Desayunos típicos',
-      'Almuerzos ejecutivos', 
-      'Comida para llevar',
-      'Eventos privados'
-    ],
-    priceRange: '$15.000 - $35.000',
-    social: {
-      instagram: '@lafondacriolla',
-      facebook: 'La Fonda Criolla Ibagué'
-    },
-    // 🎮 Datos de gamificación para empresarios
+  // 🚀 MOCK DATA como fallback (se mantiene businessData para compatibilidad)
+  const businessData = business ? {
+    id: business.id,
+    name: business.name,
+    category: business.category,
+    description: business.description,
+    logo: business.logo_url,
+    cover: business.cover_image_url,
+    rating: business.rating_average,
+    totalReviews: business.total_reviews,
+    followers: business.followers_count,
+    isVerified: true, // TODO: agregar campo verified a la DB
+    address: business.full_address || business.address,
+    phone: business.phone,
+    whatsapp: business.whatsapp,
+    hours: business.schedule,
+    services: business.services,
+    priceRange: business.price_range,
+    social: business.social_media,
+    // 🎮 Datos de gamificación para empresarios (mock mientras no están en DB)
     businessLevel: 12,
     businessExperience: 8500,
     businessExperienceToNext: 10000,
-    totalViews: 125000,
+    totalViews: stats?.totalViews || 125000,
     totalEngagement: 15600,
     badges: ['top_rated', 'viral_creator', 'community_favorite', 'consistent_poster'],
     streak: 21, // 21 días consecutivos con actividad
@@ -188,40 +254,7 @@ export default function BusinessDetail({
       followers: 200,
       engagement: 1200,
     },
-  };
-
-  const videos: Video[] = [
-    {
-      id: '1',
-      title: 'Desayuno típico tolimense completo',
-      thumbnail:
-        'https://images.unsplash.com/photo-1723693407703-f42009db4cd7?w=200&h=350&fit=crop',
-      views: 5420,
-      likes: 234,
-      comments: 45,
-      date: '2 días'
-    },
-    {
-      id: '2',
-      title: 'Preparación de la lechona criolla',
-      thumbnail:
-        'https://images.unsplash.com/photo-1695654389026-ac27bd5dd57c?w=200&h=350&fit=crop',
-      views: 8930,
-      likes: 467,
-      comments: 89,
-      date: '5 días'
-    },
-    {
-      id: '3',
-      title: 'Tour por nuestra cocina tradicional',
-      thumbnail:
-        'https://images.unsplash.com/photo-1556908114-f6e7ad7d3136?w=200&h=350&fit=crop',
-      views: 3210,
-      likes: 189,
-      comments: 34,
-      date: '1 semana'
-    }
-  ];
+  } : null;
 
   const reviews: Review[] = [
     {
@@ -240,25 +273,8 @@ export default function BusinessDetail({
     },
   ];
 
-  const stats: Stats = {
-    thisMonth: {
-      views: 18560,
-      likes: 890,
-      newFollowers: 234,
-      chatsStarted: 67,
-      conversions: 23
-    },
-    lastMonth: {
-      views: 15240,
-      likes: 723,
-      newFollowers: 189,
-      chatsStarted: 45,
-      conversions: 18
-    }
-  };
-
   const handleFollow = () => {
-    setIsFollowing(!isFollowing);
+    toggleFollow();
   };
 
   const formatNumber = (num: number): string => {
@@ -270,8 +286,8 @@ export default function BusinessDetail({
     return ((current - previous) / previous * 100).toFixed(1);
   };
 
-  // 🎮 Funciones de gamificación para empresarios
   const getBusinessLevelProgress = (): number => {
+    if (!businessData) return 0;
     return (businessData.businessExperience / businessData.businessExperienceToNext) * 100;
   };
 
@@ -354,7 +370,7 @@ export default function BusinessDetail({
       {/* Descripción */}
       <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
         <Text style={[styles.desc, { color: colors.textSecondary }]}>
-          {businessData.description}
+          {businessData?.description || 'Sin descripción disponible'}
         </Text>
       </View>
 
@@ -366,78 +382,117 @@ export default function BusinessDetail({
         <View style={styles.contactItem}>
           <MapPin size={18} color={colors.textSecondary} />
           <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-            {businessData.address}
+            {businessData?.address || 'Dirección no disponible'}
           </Text>
         </View>
         <View style={styles.contactItem}>
           <Phone size={18} color={colors.textSecondary} />
           <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-            {businessData.phone}
+            {businessData?.phone || 'Teléfono no disponible'}
           </Text>
         </View>
         <View style={styles.contactItem}>
           <Text style={[styles.whatsappIcon, { color: colors.textSecondary }]}>📱</Text>
           <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-            WhatsApp: {businessData.whatsapp}
+            WhatsApp: {businessData?.whatsapp || 'No disponible'}
           </Text>
         </View>
       </View>
 
       {/* Horarios */}
-      <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Horarios de atención
-        </Text>
-        {Object.entries(businessData.hours).map(([days, hours]) => (
-          <View key={days} style={styles.hoursItem}>
-            <Text style={[styles.hoursDay, { color: colors.textSecondary }]}>{days}</Text>
-            <Text style={[styles.hoursTime, { color: colors.text }]}>{hours}</Text>
-          </View>
-        ))}
-      </View>
+      {businessData?.hours && (
+        <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Horarios de atención
+          </Text>
+          {Object.entries(businessData.hours).map(([day, schedule]) => {
+            // Formatear el día en español
+            const dayNames: Record<string, string> = {
+              'monday': 'Lunes',
+              'tuesday': 'Martes', 
+              'wednesday': 'Miércoles',
+              'thursday': 'Jueves',
+              'friday': 'Viernes',
+              'saturday': 'Sábado',
+              'sunday': 'Domingo'
+            };
+
+            // Formatear el horario según el tipo
+            let scheduleText = '';
+            if (typeof schedule === 'string') {
+              scheduleText = schedule;
+            } else if (typeof schedule === 'object' && schedule && 'open' in schedule && 'close' in schedule) {
+              if (schedule.isOpen) {
+                scheduleText = `${schedule.open} - ${schedule.close}`;
+              } else {
+                scheduleText = 'Cerrado';
+              }
+            } else {
+              scheduleText = 'No disponible';
+            }
+
+            return (
+              <View key={day} style={styles.hoursItem}>
+                <Text style={[styles.hoursDay, { color: colors.textSecondary }]}>
+                  {dayNames[day] || day}
+                </Text>
+                <Text style={[styles.hoursTime, { color: colors.text }]}>
+                  {scheduleText}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
 
       {/* Servicios */}
-      <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Servicios
-        </Text>
-        <View style={styles.servicesGrid}>
-          {businessData.services.map((service) => (
-            <View key={service} style={[styles.serviceItem, { backgroundColor: colors.background }]}>
-              <Text style={[styles.serviceText, { color: colors.text }]}>✓ {service}</Text>
-            </View>
-          ))}
+      {businessData?.services && businessData.services.length > 0 && (
+        <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Servicios
+          </Text>
+          <View style={styles.servicesGrid}>
+            {businessData.services.map((service) => (
+              <View key={service} style={[styles.serviceItem, { backgroundColor: colors.background }]}>
+                <Text style={[styles.serviceText, { color: colors.text }]}>✓ {service}</Text>
+              </View>
+            ))}
+          </View>
         </View>
-      </View>
+      )}
 
       {/* Rango de precios */}
-      <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Rango de precios
-        </Text>
-        <Text style={[styles.priceRange, { color: colors.textSecondary }]}>
-          {businessData.priceRange}
-        </Text>
-      </View>
+      {businessData?.priceRange && (
+        <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Rango de precios
+          </Text>
+          <Text style={[styles.priceRange, { color: colors.textSecondary }]}>
+            {businessData.priceRange}
+          </Text>
+        </View>
+      )}
 
       {/* Redes sociales */}
-      <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          Redes sociales
-        </Text>
-        <View style={styles.contactItem}>
-          <Instagram size={18} color="#E4405F" />
-          <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-            {businessData.social.instagram}
+      {businessData?.social && (
+        <View style={[styles.infoSection, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Redes sociales
           </Text>
+          <View style={styles.contactItem}>
+            <Instagram size={18} color="#E4405F" />
+            <Text style={[styles.contactText, { color: colors.textSecondary }]}>
+              {businessData.social.instagram || 'No disponible'}
+            </Text>
+          </View>
+          <View style={styles.contactItem}>
+            <Facebook size={18} color="#1877F2" />
+            <Text style={[styles.contactText, { color: colors.textSecondary }]}>
+              {businessData.social.facebook || 'No disponible'}
+            </Text>
+          </View>
         </View>
-        <View style={styles.contactItem}>
-          <Facebook size={18} color="#1877F2" />
-          <Text style={[styles.contactText, { color: colors.textSecondary }]}>
-            {businessData.social.facebook}
-          </Text>
-        </View>
-      </View>
+      )}
     </ScrollView>
   );
 
@@ -486,46 +541,46 @@ export default function BusinessDetail({
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
             <Text style={[styles.statNumber, { color: themeColors.primary }]}>
-              {stats.thisMonth.views.toLocaleString()}
+              {stats?.thisMonth.views.toLocaleString() || '0'}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
               Visualizaciones
             </Text>
             <Text style={[styles.statGrowth, { color: themeColors.success }]}>
-              +{calculateGrowth(stats.thisMonth.views, stats.lastMonth.views)}%
+              +{stats ? calculateGrowth(stats.thisMonth.views, stats.lastMonth.views) : '0'}%
             </Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
             <Text style={[styles.statNumber, { color: themeColors.error }]}>
-              {stats.thisMonth.likes}
+              {stats?.thisMonth.likes || 0}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
               Likes
             </Text>
             <Text style={[styles.statGrowth, { color: themeColors.success }]}>
-              +{calculateGrowth(stats.thisMonth.likes, stats.lastMonth.likes)}%
+              +{stats ? calculateGrowth(stats.thisMonth.likes, stats.lastMonth.likes) : '0'}%
             </Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
             <Text style={[styles.statNumber, { color: themeColors.secondary }]}>
-              {stats.thisMonth.newFollowers}
+              {stats?.thisMonth.newFollowers || 0}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
               Nuevos seguidores
             </Text>
             <Text style={[styles.statGrowth, { color: themeColors.success }]}>
-              +{calculateGrowth(stats.thisMonth.newFollowers, stats.lastMonth.newFollowers)}%
+              +{stats ? calculateGrowth(stats.thisMonth.newFollowers, stats.lastMonth.newFollowers) : '0'}%
             </Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.backgroundSecondary }]}>
             <Text style={[styles.statNumber, { color: themeColors.accent }]}>
-              {stats.thisMonth.conversions}
+              {stats?.thisMonth.conversions || 0}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
               Conversiones
             </Text>
             <Text style={[styles.statGrowth, { color: themeColors.success }]}>
-              +{calculateGrowth(stats.thisMonth.conversions, stats.lastMonth.conversions)}%
+              +{stats ? calculateGrowth(stats.thisMonth.conversions, stats.lastMonth.conversions) : '0'}%
             </Text>
           </View>
         </View>
@@ -541,7 +596,7 @@ export default function BusinessDetail({
             Chats iniciados
           </Text>
           <Text style={[styles.engagementValue, { color: colors.text }]}>
-            {stats.thisMonth.chatsStarted}
+            {stats?.thisMonth.chatsStarted || 0}
           </Text>
         </View>
         <View style={styles.engagementItem}>
@@ -549,7 +604,7 @@ export default function BusinessDetail({
             Tasa de conversión
           </Text>
           <Text style={[styles.engagementValue, { color: colors.text }]}>
-            {((stats.thisMonth.conversions / stats.thisMonth.chatsStarted) * 100).toFixed(1)}%
+            {stats ? ((stats.thisMonth.conversions / stats.thisMonth.chatsStarted) * 100).toFixed(1) : '0'}%
           </Text>
         </View>
       </View>
@@ -598,10 +653,10 @@ export default function BusinessDetail({
                 </Text>
               }
               ListFooterComponent={
-                isOwnerView ? (
+                isOwner ? (
                   <TouchableOpacity 
                     style={[styles.uploadButton, { borderColor: colors.border }]}
-                    onPress={onContentUpload}
+                    onPress={handleContentUpload}
                   >
                     <Upload size={24} color={colors.textSecondary} />
                     <Text style={[styles.uploadText, { color: colors.textSecondary }]}>
@@ -618,7 +673,7 @@ export default function BusinessDetail({
       case 'info':
         return renderInfo();
       case 'stats':
-        return isOwnerView ? renderStats() : renderInfo();
+        return isOwner ? renderStats() : renderInfo();
       default:
         return null;
     }
@@ -626,7 +681,7 @@ export default function BusinessDetail({
 
   const getVisibleTabs = (): TabType[] => {
     const baseTabs: TabType[] = ['videos', 'info', 'reviews'];
-    if (isOwnerView) {
+    if (isOwner) {
       baseTabs.push('stats');
     }
     return baseTabs;
@@ -636,16 +691,16 @@ export default function BusinessDetail({
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header con portada */}
       <View>
-        <Image source={{ uri: businessData.cover }} style={styles.cover} />
+        <Image source={{ uri: businessData?.cover || '' }} style={styles.cover} />
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={[styles.backBtn, { backgroundColor: colors.overlay }]}
-            onPress={onBack}
+            onPress={handleBack}
           >
             <ArrowLeft size={22} color={themeColors.onOverlay} />
           </TouchableOpacity>
           
-          {isOwnerView && (
+          {isOwner && (
             <View style={styles.ownerActions}>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: colors.overlay }]}
@@ -664,43 +719,43 @@ export default function BusinessDetail({
 
       {/* Info negocio */}
       <View style={[styles.infoBox, { backgroundColor: colors.card }]}>
-        <Image source={{ uri: businessData.logo }} style={styles.logo} />
+        <Image source={{ uri: businessData?.logo }} style={styles.logo} />
         
         <View style={styles.businessHeader}>
           <View style={styles.businessInfo}>
             <Text style={[styles.title, { color: colors.text }]}>
-              {businessData.name}
+              {businessData?.name || 'Negocio sin nombre'}
             </Text>
             <Text style={[styles.category, { color: colors.textSecondary }]}>
-              {businessData.category}
+              {businessData?.category || 'Sin categoría'}
             </Text>
             <View style={styles.statsRow}>
               <TouchableOpacity
-                onPress={onReviews}
+                onPress={handleReviews}
                 style={[
                   styles.row,
-                  !onReviews && styles.disabledButton,
+                  !handleReviews && styles.disabledButton,
                 ]}
-                disabled={!onReviews}
+                disabled={!handleReviews}
               >
                 <Star size={16} color={themeColors.warning} />
                 <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                  {businessData.rating} ({businessData.totalReviews})
+                  {businessData?.rating || 0} ({businessData?.totalReviews || 0})
                 </Text>
               </TouchableOpacity>
               <View style={styles.row}>
                 <Users size={16} color={colors.textSecondary} />
                 <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                  {formatNumber(businessData.followers)} seguidores
+                  {formatNumber(businessData?.followers || 0)} seguidores
                 </Text>
               </View>
             </View>
           </View>
           
-          {!isOwnerView && (
+          {!isOwner && (
             <View style={styles.followersInfo}>
               <Text style={[styles.followersNumber, { color: colors.text }]}>
-                {businessData.followers.toLocaleString()}
+                {businessData?.followers?.toLocaleString() || '0'}
               </Text>
               <Text style={[styles.followersLabel, { color: colors.textSecondary }]}>
                 Seguidores
@@ -713,15 +768,15 @@ export default function BusinessDetail({
           style={[styles.desc, { color: colors.textSecondary }]}
           numberOfLines={3}
         >
-          {businessData.description}
+          {businessData?.description || 'Sin descripción disponible'}
         </Text>
 
         {/* Botones */}
         <View style={styles.actionRow}>
-          {isOwnerView ? (
+          {isOwner ? (
             <>
               <TouchableOpacity
-                onPress={onContentUpload}
+                onPress={handleContentUpload}
                 style={[styles.primaryBtn, { backgroundColor: themeColors.primary }]}
               >
                 <Upload size={16} color={themeColors.onPrimary} />
@@ -731,7 +786,7 @@ export default function BusinessDetail({
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.secondaryBtn, { borderColor: colors.border }]}
-                onPress={onContentManager}
+                onPress={() => console.log('Gestionar contenido')}
               >
                 <BarChart3 size={16} color={colors.text} />
                 <Text style={[styles.secondaryBtnText, { color: colors.text }]}>
@@ -765,7 +820,7 @@ export default function BusinessDetail({
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.chatBtn, { backgroundColor: themeColors.success }]}
-                onPress={onChat}
+                onPress={handleChat}
               >
                 <MessageCircle size={18} color={themeColors.onPrimary} />
                 <Text style={[styles.chatBtnText, { color: themeColors.onPrimary }]}>
@@ -777,7 +832,7 @@ export default function BusinessDetail({
         </View>
 
         {/* 🎮 Sección de gamificación para empresarios */}
-        {isOwnerView && (
+        {isOwner && businessData && (
           <View style={styles.businessLevelContainer}>
             <View style={styles.businessLevelRow}>
               <View style={styles.businessLevelBadge}>
@@ -1470,6 +1525,49 @@ const styles = StyleSheet.create({
   },
   secondaryBtnText: {
     marginLeft: 6,
+    fontWeight: '600',
+  },
+  // Estilos para el manejo de errores
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorHeader: {
+    position: 'absolute',
+    top: 40,
+    left: 16,
+    right: 16,
+    zIndex: 1,
+  },
+  errorContent: {
+    alignItems: 'center',
+    maxWidth: 300,
+  },
+  errorIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  retryButtonText: {
+    fontSize: 16,
     fontWeight: '600',
   },
 });
