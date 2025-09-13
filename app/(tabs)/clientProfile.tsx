@@ -226,7 +226,7 @@ export default function ProfileClient() {
   // Datos mock para los elementos que aún no están implementados
   const achievements: Achievement[] = [
     { 
-      icon: "🏆", 
+      icon: "", 
       title: "Explorador", 
       desc: "Visitó 10 lugares diferentes",
       isUnlocked: (currentUser.stats?.followingCount || 0) >= 10,
@@ -234,7 +234,7 @@ export default function ProfileClient() {
       maxProgress: 10,
     },
     { 
-      icon: "⭐", 
+      icon: "", 
       title: "Crítico", 
       desc: "Dejó 25 reseñas",
       isUnlocked: (currentUser.stats?.totalReviews || 0) >= 25,
@@ -242,7 +242,7 @@ export default function ProfileClient() {
       maxProgress: 25,
     },
     { 
-      icon: "💎", 
+      icon: "", 
       title: "VIP", 
       desc: "Acumuló 1000+ coins",
       isUnlocked: (currentUser.wallet?.balance || 0) >= 1000,
@@ -250,7 +250,7 @@ export default function ProfileClient() {
       maxProgress: 1000,
     },
     { 
-      icon: "📍", 
+      icon: "", 
       title: "Local", 
       desc: "Conoce Ibagué como su casa",
       isUnlocked: (currentUser.stats?.totalPlans || 0) >= 3,
@@ -258,7 +258,7 @@ export default function ProfileClient() {
       maxProgress: 3,
     },
     { 
-      icon: "🔥", 
+      icon: "", 
       title: "Racha", 
       desc: "7 días activo consecutivos",
       isUnlocked: (currentUser.streak || 0) >= 7,
@@ -266,7 +266,7 @@ export default function ProfileClient() {
       maxProgress: 7,
     },
     { 
-      icon: "👥", 
+      icon: "", 
       title: "Social", 
       desc: "Sigue a 50 negocios",
       isUnlocked: (currentUser.stats?.followingCount || 0) >= 50,
@@ -860,7 +860,6 @@ export default function ProfileClient() {
           <View style={styles.statItem}>
             <View style={styles.streakContainer}>
               <Text style={styles.streakNumber}>{currentUser.streak || 0}</Text>
-              <Text style={styles.streakIcon}>🔥</Text>
             </View>
             <Text style={styles.statLabel}>Racha</Text>
           </View>

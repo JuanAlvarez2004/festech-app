@@ -1,29 +1,30 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-    ArrowLeft,
-    BarChart3,
-    Edit3,
-    Eye,
-    Facebook,
-    Heart,
-    Instagram,
-    MapPin,
-    MessageCircle,
-    Phone,
-    Settings,
-    Star,
-    Upload,
-    Users
+  ArrowLeft,
+  BarChart3,
+  Edit3,
+  Eye,
+  Facebook,
+  Heart,
+  Instagram,
+  MapPin,
+  MessageCircle,
+  Phone,
+  Settings,
+  Star,
+  Upload,
+  Users
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-    FlatList,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { Loading } from '@/components/ui';
@@ -31,6 +32,8 @@ import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useBusinessDetail } from '@/hooks/useBusinessDetail';
+import { useConversations } from '@/hooks/useConversations';
+import type { VideoWithBusiness } from '@/types';
 
 interface BusinessDetailProps {
   onBack: () => void;
@@ -43,7 +46,7 @@ interface BusinessDetailProps {
 
 type TabType = 'videos' | 'info' | 'reviews' | 'stats';
 
-interface Video {
+interface MockVideo {
   id: string;
   title: string;
   thumbnail: string;
@@ -127,6 +130,16 @@ export default function BusinessDetail() {
 
   const [activeTab, setActiveTab] = useState<TabType>('videos');
 
+  // Debug logs para identificar el problema
+  console.log('🏪 BusinessDetail - Params received:', params);
+  console.log('🏪 BusinessDetail - BusinessId:', businessId);
+  console.log('🏪 BusinessDetail - User ID:', user?.id);
+
+  // Verificar que businessId existe
+  if (!businessId) {
+    console.error('❌ BusinessDetail - No businessId provided');
+  }
+
   // Usar el hook de business detail
   const {
     business,
@@ -140,14 +153,89 @@ export default function BusinessDetail() {
     isOwner
   } = useBusinessDetail(businessId, user?.id);
 
+  // Hook para manejar conversaciones
+  const { createBusinessConversation } = useConversations(user?.id);
+
   // Funciones de navegación (definir antes de su uso)
   const handleBack = () => {
     router.back();
   };
 
-  const handleChat = () => {
-    // TODO: implementar navegación a chat
-    console.log('Abrir chat con el negocio');
+  const handleChat = async () => {
+    console.log('🎯 handleChat iniciado', { 
+      userId: user?.id, 
+      businessId, 
+      isOwner,
+      businessExists: !!business 
+    });
+
+    if (!user?.id) {
+      console.log('❌ No hay usuario autenticado');
+      Alert.alert('Error', 'Debes iniciar sesión para chatear con negocios');
+      return;
+    }
+
+    if (!businessId) {
+      console.log('❌ No hay businessId');
+      Alert.alert('Error', 'No se pudo identificar el negocio');
+      return;
+    }
+
+    if (isOwner) {
+      console.log('👤 Usuario es dueño, navegando directamente al inbox');
+      // Si es el dueño, ir directamente al inbox
+      router.push('/(tabs)/inbox');
+      return;
+    }
+
+    try {
+      console.log('🚀 Iniciando creación de conversación:', { 
+        userId: user.id, 
+        businessId,
+        businessName: business?.name 
+      });
+      
+      // Verificar que tenemos todos los datos necesarios
+      if (!business) {
+        throw new Error('Información del negocio no disponible');
+      }
+      
+      // Crear o encontrar la conversación existente
+      const conversationId = await createBusinessConversation(businessId);
+      
+      console.log('📞 Resultado de createBusinessConversation:', conversationId);
+      
+      if (conversationId) {
+        console.log('✅ Conversación lista, navegando al inbox:', conversationId);
+        
+        // Navegar al inbox con la conversación específica
+        router.push({
+          pathname: '/(tabs)/inbox',
+          params: { conversationId }
+        });
+      } else {
+        console.log('❌ createBusinessConversation retornó null/undefined');
+        throw new Error('No se pudo crear la conversación - función retornó null');
+      }
+    } catch (error) {
+      console.error('❌ Error completo al iniciar chat:', {
+        error,
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userId: user?.id,
+        businessId,
+        businessName: business?.name
+      });
+      
+      Alert.alert(
+        'Error de Chat', 
+        `No se pudo iniciar el chat con ${business?.name || 'este negocio'}.\n\nDetalles: ${error instanceof Error ? error.message : 'Error desconocido'}\n\n¿Deseas intentar de nuevo?`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Reintentar', onPress: () => handleChat() }
+        ]
+      );
+    }
   };
 
   const handleContentUpload = () => {
@@ -277,7 +365,8 @@ export default function BusinessDetail() {
     toggleFollow();
   };
 
-  const formatNumber = (num: number): string => {
+  const formatNumber = (num: number | undefined | null): string => {
+    if (!num || num === 0) return '0';
     if (num >= 1000) return (num / 1000).toFixed(1) + 'k';
     return num.toString();
   };
@@ -329,9 +418,9 @@ export default function BusinessDetail() {
     }
   };
 
-  const renderVideoItem = ({ item }: { item: Video }) => (
+  const renderVideoItem = ({ item }: { item: VideoWithBusiness }) => (
     <View style={[styles.videoCard, { backgroundColor: colors.card }]}>
-      <Image source={{ uri: item.thumbnail }} style={styles.videoThumb} />
+      <Image source={{ uri: item.thumbnail_url || 'https://via.placeholder.com/300x400' }} style={styles.videoThumb} />
       
       {/* Overlay con información del video */}
       <View style={styles.videoOverlay}>
@@ -342,23 +431,23 @@ export default function BusinessDetail() {
           <View style={styles.videoStatItem}>
             <Eye size={12} color={themeColors.onOverlay} />
             <Text style={[styles.videoStatText, { color: themeColors.onOverlay }]}>
-              {formatNumber(item.views)}
+              {formatNumber(item.views_count || 0)}
             </Text>
           </View>
           <View style={styles.videoStatItem}>
             <Heart size={12} color={themeColors.onOverlay} />
             <Text style={[styles.videoStatText, { color: themeColors.onOverlay }]}>
-              {item.likes}
+              {item.likes_count || 0}
             </Text>
           </View>
           <View style={styles.videoStatItem}>
             <MessageCircle size={12} color={themeColors.onOverlay} />
             <Text style={[styles.videoStatText, { color: themeColors.onOverlay }]}>
-              {item.comments}
+              {0}
             </Text>
           </View>
           <Text style={[styles.videoDate, { color: themeColors.onOverlay }]}>
-            {item.date}
+            {new Date(item.created_at).toLocaleDateString()}
           </Text>
         </View>
       </View>
@@ -616,17 +705,17 @@ export default function BusinessDetail() {
         </Text>
         {videos.slice(0, 2).map((video) => (
           <View key={video.id} style={styles.topVideoItem}>
-            <Image source={{ uri: video.thumbnail }} style={styles.topVideoThumb} />
+            <Image source={{ uri: video.thumbnail_url || 'https://via.placeholder.com/60x40' }} style={styles.topVideoThumb} />
             <View style={styles.topVideoInfo}>
               <Text style={[styles.topVideoTitle, { color: colors.text }]} numberOfLines={2}>
                 {video.title}
               </Text>
               <View style={styles.topVideoStats}>
                 <Text style={[styles.topVideoStat, { color: colors.textSecondary }]}>
-                  {video.views.toLocaleString()} vistas
+                  {(video.views_count || 0).toLocaleString()} vistas
                 </Text>
                 <Text style={[styles.topVideoStat, { color: colors.textSecondary }]}>
-                  {video.likes} likes
+                  {video.likes_count || 0} likes
                 </Text>
               </View>
             </View>

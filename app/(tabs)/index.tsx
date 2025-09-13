@@ -30,23 +30,26 @@ export default function HomeScreen() {
 
   // Combine Supabase videos with local data, avoiding duplicates
   useEffect(() => {
-    console.log('Videos state update:', { 
+    console.log('🎬 Videos state update:', { 
       supabaseCount: supabaseVideos.length, 
       localCount: localVideos.length,
       loading: videosLoading,
       error: videosError 
     });
 
-    // Always combine Supabase and local videos
+    // Combine only Supabase and local videos (no mock fallback)
     const allVideos = [...supabaseVideos, ...localVideos];
+    
+    // Remove duplicates
     const uniqueVideos = allVideos.filter((video, index, self) => 
       index === self.findIndex(v => v.id === video.id)
     );
     
+    console.log('🎯 Final videos count:', uniqueVideos.length);
     setVideos(uniqueVideos);
     
     if (uniqueVideos.length === 0 && !videosLoading) {
-      console.warn('No videos available from any source');
+      console.warn('⚠️ No videos available from Supabase or local storage');
     }
   }, [supabaseVideos, videosLoading, videosError, localVideos]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -96,6 +99,7 @@ export default function HomeScreen() {
 
   const handleBusinessPress = useCallback((video: VideoWithBusiness) => {
     // Navegar a la pantalla de detalle del negocio
+    console.log('🏪 Navigating to business detail for:', video.business.id, video.business.name);
     router.push(`/businessDetail?businessId=${video.business.id}` as any);
   }, []);
 
@@ -158,8 +162,8 @@ export default function HomeScreen() {
           <Text style={styles.emptyText}>No hay videos disponibles</Text>
           <Text style={styles.emptySubtext}>
             {videosError 
-              ? 'Error de conexión. Verifica tu internet e intenta de nuevo.' 
-              : 'Sé el primero en subir un video. ¡Desliza para actualizar!'
+              ? 'Error de conexión con la base de datos. Verifica tu internet e intenta de nuevo.' 
+              : 'No hay videos en la base de datos. ¡Sé el primero en subir uno!'
             }
           </Text>
         </View>

@@ -1,6 +1,9 @@
 // Exportar todos los componentes UI
 export { default as Button } from './Button';
 export { default as Card } from './Card';
+export { ChatHeader } from './ChatHeader';
+export { ChatInput } from './ChatInput';
+export { ConversationItem } from './ConversationItem';
 export { IconSymbol } from './icon-symbol';
 export { default as Input } from './Input';
 export { default as Loading } from './Loading';

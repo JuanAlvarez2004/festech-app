@@ -13,7 +13,7 @@ import type { BusinessWithOwner } from '@/types';
 import { useCallback, useEffect, useState } from 'react';
 
 // Flag para usar datos mock o reales
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 interface UseBusinessDetailState {
   business: BusinessWithOwner | null;
@@ -42,9 +42,14 @@ export const useBusinessDetail = (businessId: string, userId?: string): UseBusin
     refreshing: false
   });
 
+  // Debug logs para identificar el problema
+  console.log('🔧 useBusinessDetail - Hook initialized with:', { businessId, userId, USE_MOCK_DATA });
+
   // Función para cargar detalles del negocio
   const loadBusinessDetail = useCallback(async (isRefresh: boolean = false) => {
     try {
+      console.log('🔄 useBusinessDetail - Loading business detail for:', businessId);
+      
       setState(prev => ({
         ...prev,
         loading: !isRefresh,
@@ -52,15 +57,31 @@ export const useBusinessDetail = (businessId: string, userId?: string): UseBusin
         error: null
       }));
 
+      // Validar que businessId existe
+      if (!businessId) {
+        throw new Error('BusinessId is required');
+      }
+
       if (USE_MOCK_DATA) {
+        console.log('📋 useBusinessDetail - Using mock data for businessId:', businessId);
+        
         // Usar datos mock
         const mockBusiness = getMockBusinessById(businessId);
+        console.log('📋 useBusinessDetail - Mock business found:', mockBusiness?.name || 'NOT FOUND');
+        
         if (!mockBusiness) {
-          throw new Error('Negocio no encontrado');
+          throw new Error(`Negocio con ID ${businessId} no encontrado en datos mock`);
         }
 
         const mockStats = userId === mockBusiness.owner_id ? getMockBusinessStats(businessId) : null;
         const mockIsFollowing = userId ? isMockBusinessFollowed(businessId) : false;
+
+        console.log('📊 useBusinessDetail - Mock data loaded:', {
+          businessName: mockBusiness.name,
+          statsLoaded: !!mockStats,
+          isFollowing: mockIsFollowing,
+          isOwner: userId === mockBusiness.owner_id
+        });
 
         // Mock videos para el negocio
         const mockVideos = [
@@ -93,6 +114,8 @@ export const useBusinessDetail = (businessId: string, userId?: string): UseBusin
           }
         ];
 
+        console.log('✅ useBusinessDetail - Mock data successfully loaded');
+
         setState(prev => ({
           ...prev,
           business: mockBusiness,
@@ -104,8 +127,18 @@ export const useBusinessDetail = (businessId: string, userId?: string): UseBusin
           error: null
         }));
       } else {
+        console.log('🌐 useBusinessDetail - Using Supabase API for businessId:', businessId);
+        
         // Usar API real
         const businessDetail = await getBusinessDetail({ businessId, userId });
+        
+        console.log('✅ useBusinessDetail - Supabase data loaded:', {
+          businessName: businessDetail.name,
+          videosCount: businessDetail.videos?.length || 0,
+          statsLoaded: !!businessDetail.stats,
+          isFollowing: businessDetail.isFollowing,
+          isOwner: userId === businessDetail.owner_id
+        });
         
         setState(prev => ({
           ...prev,
@@ -119,12 +152,12 @@ export const useBusinessDetail = (businessId: string, userId?: string): UseBusin
         }));
       }
     } catch (error) {
-      console.error('Error cargando detalles del negocio:', error);
+      console.error('❌ useBusinessDetail - Error loading business detail:', error);
       setState(prev => ({
         ...prev,
         loading: false,
         refreshing: false,
-        error: error instanceof Error ? error.message : 'Error desconocido'
+        error: error instanceof Error ? error.message : 'Error desconocido al cargar el negocio'
       }));
     }
   }, [businessId, userId]);
@@ -158,15 +191,17 @@ export const useBusinessDetail = (businessId: string, userId?: string): UseBusin
           isFollowing: newFollowStatus
         }));
       } else {
+        console.log('🔄 useBusinessDetail - Toggling follow via Supabase API');
         // Usar API real
         const newFollowStatus = await toggleBusinessFollow(businessId, userId);
+        console.log('✅ useBusinessDetail - Follow status updated:', newFollowStatus);
         setState(prev => ({
           ...prev,
           isFollowing: newFollowStatus
         }));
       }
     } catch (error) {
-      console.error('Error al cambiar seguimiento:', error);
+      console.error('❌ useBusinessDetail - Error toggling follow:', error);
       
       // Revertir cambio optimista
       setState(prev => ({
@@ -193,7 +228,15 @@ export const useBusinessDetail = (businessId: string, userId?: string): UseBusin
   // Cargar datos iniciales
   useEffect(() => {
     if (businessId) {
+      console.log('🚀 useBusinessDetail - Starting initial load for businessId:', businessId);
       loadBusinessDetail();
+    } else {
+      console.error('❌ useBusinessDetail - No businessId provided to hook');
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'ID de negocio requerido'
+      }));
     }
   }, [businessId, loadBusinessDetail]);
 

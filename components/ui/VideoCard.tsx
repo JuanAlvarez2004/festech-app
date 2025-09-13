@@ -44,7 +44,12 @@ const VideoCard = React.memo(function VideoCard({
 
   // Validar datos del video antes de renderizar
   if (!video || !video.business) {
-    console.warn('VideoCard: Invalid video data', video);
+    console.warn('⚠️ VideoCard: Invalid video data - missing video or business:', { 
+      hasVideo: !!video, 
+      hasBusiness: !!video?.business,
+      videoId: video?.id,
+      businessId: video?.business?.id 
+    });
     return null;
   }
 
