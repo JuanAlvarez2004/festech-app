@@ -95,8 +95,8 @@ export default function HomeScreen() {
   }, []);
 
   const handleBusinessPress = useCallback((video: VideoWithBusiness) => {
-    // Usar la ruta del tab businessDetail
-    router.push('/(tabs)/businessDetail' as any);
+    // Navegar a la pantalla de detalle del negocio
+    router.push(`/businessDetail?businessId=${video.business.id}` as any);
   }, []);
 
   const handleUserPress = useCallback((video: VideoWithBusiness) => {

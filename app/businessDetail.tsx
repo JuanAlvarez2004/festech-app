@@ -1,29 +1,29 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import {
-  ArrowLeft,
-  BarChart3,
-  Edit3,
-  Eye,
-  Facebook,
-  Heart,
-  Instagram,
-  MapPin,
-  MessageCircle,
-  Phone,
-  Settings,
-  Star,
-  Upload,
-  Users
+    ArrowLeft,
+    BarChart3,
+    Edit3,
+    Eye,
+    Facebook,
+    Heart,
+    Instagram,
+    MapPin,
+    MessageCircle,
+    Phone,
+    Settings,
+    Star,
+    Upload,
+    Users
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  FlatList,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { Loading } from '@/components/ui';

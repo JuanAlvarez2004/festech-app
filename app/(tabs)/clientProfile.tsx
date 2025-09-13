@@ -1071,9 +1071,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.8)',
   },
   interestsContainer: {
+    paddingVertical: 8,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    justifyContent: 'center',
   },
   interestTag: {
     paddingHorizontal: 12,

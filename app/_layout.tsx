@@ -46,6 +46,14 @@ export default function RootLayout() {
         <ThemeProvider value={colorScheme === 'dark' ? FestechDarkTheme : FestechLightTheme}>
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen 
+              name="businessDetail" 
+              options={{ 
+                headerShown: false,
+                presentation: 'card',
+                title: 'Detalle del Negocio'
+              }} 
+            />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
           </Stack>
           <StatusBar style="auto" />
