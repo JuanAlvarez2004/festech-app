@@ -55,6 +55,20 @@ export default function RootLayout() {
               }} 
             />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+            <Stack.Screen 
+              name="auth/login" 
+              options={{ 
+                headerShown: false,
+                presentation: 'card'
+              }} 
+            />
+            <Stack.Screen 
+              name="auth/register" 
+              options={{ 
+                headerShown: false,
+                presentation: 'card'
+              }} 
+            />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>

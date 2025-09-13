@@ -2,14 +2,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -284,7 +284,7 @@ export default function RegisterScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <LinearGradient
         colors={[Colors.primary, Colors.secondary]}
         style={styles.gradient}
@@ -360,6 +360,7 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.primary, // Fallback color
   },
   gradient: {
     flex: 1,
@@ -489,18 +490,23 @@ const styles = StyleSheet.create({
   interestsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: Spacing.md,
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
     marginBottom: Spacing.lg,
   },
   interestCard: {
-    paddingHorizontal: Spacing.lg,
+    textAlign: 'center',
+    paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.md,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.gray300,
     backgroundColor: Colors.gray100,
-    minWidth: '45%',
+    width: '48%',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+    minHeight: 50,
   },
   interestCardSelected: {
     borderColor: Colors.primary,
@@ -510,6 +516,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.md,
     fontWeight: Typography.weight.medium,
     color: Colors.gray700,
+    textAlign: 'center',
   },
   interestLabelSelected: {
     color: Colors.white,

@@ -2,10 +2,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React from 'react';
 import {
-  Dimensions,
-  StyleSheet,
-  Text,
-  View,
+    Dimensions,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,7 +25,7 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <LinearGradient
         colors={[Colors.primary, Colors.primaryLight]}
         start={{ x: 0, y: 0 }}
@@ -85,6 +85,7 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.primary, // Fallback color
   },
   gradient: {
     flex: 1,

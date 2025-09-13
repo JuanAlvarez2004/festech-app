@@ -3,14 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -58,7 +58,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <LinearGradient
         colors={[Colors.primary, Colors.primaryLight]}
         start={{ x: 0, y: 0 }}
@@ -167,6 +167,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.primary, // Fallback color
   },
   gradient: {
     flex: 1,
@@ -180,15 +181,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.lg,
   },
   header: {
     flex: 0.3,
     justifyContent: 'center',
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.sm,
+    minHeight: 200,
   },
   backButton: {
     position: 'absolute',
-    top: 0,
+    top: Spacing.sm,
     left: 0,
     padding: Spacing.sm,
     zIndex: 1,
@@ -263,7 +266,8 @@ const styles = StyleSheet.create({
   bottomContainer: {
     flex: 0.2,
     justifyContent: 'flex-end',
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.md,
+    minHeight: 60,
   },
   registerPrompt: {
     textAlign: 'center',
